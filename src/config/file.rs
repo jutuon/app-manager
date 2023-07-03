@@ -1,0 +1,192 @@
+use std::{
+    io::Write,
+    net::SocketAddr,
+    num::{NonZeroU8},
+    path::{Path, PathBuf},
+};
+
+use error_stack::{Report, Result, ResultExt};
+use serde::{Deserialize, Serialize};
+use url::Url;
+
+use crate::{utils::IntoReportExt, api::{manager::data::{DataEncryptionKey}, GetConfig}};
+
+use super::GetConfigError;
+
+pub const CONFIG_FILE_NAME: &str = "manager_config.toml";
+
+pub const DEFAULT_CONFIG_FILE_TEXT: &str = r#"
+
+# Required
+# api_key = "password"
+
+[socket]
+public_api = "127.0.0.1:4000"
+
+# [encryption_key_provider]
+# manager_base_url = "http://127.0.0.1:4000"
+# key_name = "test-server"
+
+# [[server_encryption_keys]]
+# name = "test-server"
+# key_path = "data-key.key"
+
+# [software_update_provider]
+# manager_base_url = "http://127.0.0.1:4000"
+# binary_signing_public_key = "binary-key.pub"
+
+# [software_builder]
+# manager_repository_path = "app-manager"
+# backend_repository_path = "app-backend"
+# binary_signing_key = "binary-key.pub"
+
+# [reboot_if_needed]
+# time = "12:00"
+
+# [tls]
+# public_api_cert = "server_config/public_api.cert"
+# public_api_key = "server_config/public_api.key"
+# root_certificate = "server_config/public_api.key"
+"#;
+
+#[derive(thiserror::Error, Debug)]
+pub enum ConfigFileError {
+    #[error("Save default")]
+    SaveDefault,
+    #[error("Not a directory")]
+    NotDirectory,
+    #[error("Load config file")]
+    LoadConfig,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ConfigFile {
+    pub debug: Option<bool>,
+    /// API key for manager API
+    pub api_key: String,
+    pub server_encryption_keys: Option<Vec<ServerEncryptionKey>>,
+    pub encryption_key_provider: Option<EncryptionKeyProviderConfig>,
+    pub reboot_if_needed: Option<RebootIfNeededConfig>,
+    pub software_update_provider: Option<SoftwareUpdateProviderConfig>,
+    pub software_builder: Option<SoftwareBuilderConfig>,
+    pub socket: SocketConfig,
+    /// TLS is required if debug setting is false.
+    pub tls: Option<TlsConfig>,
+}
+
+impl ConfigFile {
+    pub fn save_default(dir: impl AsRef<Path>) -> Result<(), ConfigFileError> {
+        let file_path =
+            Self::default_config_file_path(dir).change_context(ConfigFileError::SaveDefault)?;
+        let mut file = std::fs::File::create(file_path).into_error(ConfigFileError::SaveDefault)?;
+        file.write_all(DEFAULT_CONFIG_FILE_TEXT.as_bytes())
+            .into_error(ConfigFileError::SaveDefault)?;
+        Ok(())
+    }
+
+    pub fn load(dir: impl AsRef<Path>) -> Result<ConfigFile, ConfigFileError> {
+        let file_path =
+            Self::default_config_file_path(&dir).change_context(ConfigFileError::LoadConfig)?;
+        if !file_path.exists() {
+            Self::save_default(dir).change_context(ConfigFileError::LoadConfig)?;
+        }
+
+        let config_string =
+            std::fs::read_to_string(file_path).into_error(ConfigFileError::LoadConfig)?;
+        toml::from_str(&config_string).into_error(ConfigFileError::LoadConfig)
+    }
+
+    pub fn default_config_file_path(dir: impl AsRef<Path>) -> Result<PathBuf, ConfigFileError> {
+        if !dir.as_ref().is_dir() {
+            return Err(Report::new(ConfigFileError::NotDirectory));
+        }
+        let mut file_path = dir.as_ref().to_path_buf();
+        file_path.push(CONFIG_FILE_NAME);
+        return Ok(file_path);
+    }
+}
+
+
+
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SocketConfig {
+    pub public_api: SocketAddr,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TlsConfig {
+    pub public_api_cert: PathBuf,
+    pub public_api_key: PathBuf,
+
+    /// Root certificate for HTTP client for checking API calls.
+    pub root_certificate: PathBuf,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ServerEncryptionKey {
+    pub name: String,
+    pub key_path: PathBuf,
+}
+
+impl ServerEncryptionKey {
+    pub async fn read_encryption_key(&self) -> Result<DataEncryptionKey, GetConfigError> {
+        tokio::fs::read_to_string(self.key_path.as_path())
+            .await
+            .into_error(GetConfigError::EncryptionKeyLoadingFailed)
+            .map(|key| DataEncryptionKey { key })
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct EncryptionKeyProviderConfig {
+    /// Name of key which will be requested.
+    pub key_name: String,
+    pub manager_base_url: Url,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SoftwareUpdateProviderConfig {
+    pub manager_base_url: Url,
+    /// PGP public key
+    pub binary_signing_public_key: PathBuf,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SoftwareBuilderConfig {
+    pub manager_repository_path: PathBuf,
+    pub backend_repository_path: PathBuf,
+    /// PGP private key
+    pub binary_signing_key: PathBuf,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RebootIfNeededConfig {
+    /// Time when reboot should be done. Format "hh:mm". For example "12:00".
+    pub time: TimeValue,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(try_from = "String")]
+pub struct TimeValue {
+    pub hours: u8,
+    pub minutes: u8,
+}
+
+impl TryFrom<String> for TimeValue {
+    type Error = String;
+    fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
+        let mut iter = value.trim().split(':');
+        let values: Vec<&str> = iter.collect();
+        match values[..] {
+            [hours, minutes] => {
+                let hours: u8 = hours.parse().map_err(|e: std::num::ParseIntError| e.to_string())?;
+                let minutes: u8 = minutes.parse().map_err(|e: std::num::ParseIntError| e.to_string())?;
+                Ok(TimeValue {hours, minutes})
+            }
+            _ => {
+                Err(format!("Unknown values: {:?}", values))
+            }
+        }
+    }
+}

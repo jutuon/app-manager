@@ -1,0 +1,49 @@
+
+use axum::{
+    middleware,
+    routing::{get, patch, post, put}, Router,
+};
+
+use crate::{
+    api::{
+        self,
+    },
+};
+
+use super::AppState;
+
+/// Private routes only accessible with correct API key.
+pub struct PrivateRoutes {
+    state: AppState,
+}
+
+impl PrivateRoutes {
+    pub fn new(state: AppState) -> Self {
+        Self { state }
+    }
+
+    pub fn state(&self) -> AppState {
+        self.state.clone()
+    }
+
+    pub fn private_manager_server_router(&self) -> Router {
+        let private = Router::new()
+            .route(
+                api::manager::PATH_GET_ENCRYPTION_KEY,
+                get({
+                    let state = self.state.clone();
+                    move |param1, param2| api::manager::get_encryption_key(param1, param2, state)
+                }),
+            )
+            .route_layer({
+                middleware::from_fn({
+                    let state = self.state.clone();
+                    move |addr, req, next| {
+                        api::utils::authenticate_with_api_key(state.clone(), addr, req, next)
+                    }
+                })
+            });
+
+        Router::new().merge(private)
+    }
+}
