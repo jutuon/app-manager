@@ -23,6 +23,10 @@ pub const DEFAULT_CONFIG_FILE_TEXT: &str = r#"
 [socket]
 public_api = "127.0.0.1:4000"
 
+[environment]
+secure_storage_dir = "/app-secure-storage/app"
+scripts_dir = "/app-server-tools/manager-tools"
+
 # [encryption_key_provider]
 # manager_base_url = "http://127.0.0.1:4000"
 # key_name = "test-server"
@@ -70,6 +74,7 @@ pub struct ConfigFile {
     pub software_update_provider: Option<SoftwareUpdateProviderConfig>,
     pub software_builder: Option<SoftwareBuilderConfig>,
     pub socket: SocketConfig,
+    pub environment: EnvironmentConfig,
     /// TLS is required if debug setting is false.
     pub tls: Option<TlsConfig>,
 }
@@ -189,4 +194,10 @@ impl TryFrom<String> for TimeValue {
             }
         }
     }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct EnvironmentConfig {
+    pub secure_storage_dir: PathBuf,
+    pub scripts_dir: PathBuf,
 }

@@ -16,15 +16,6 @@ use crate::{config::{Config, file::EncryptionKeyProviderConfig}, api::GetApiMana
 
 use super::app::AppState;
 
-const ENCRYPTED_HOME_DIR_LOCATION: &str = "/app-secure-storage/app";
-
-const OPEN_ENCRYPTION_SCRIPT: &str = "/app-server-tools/manager-tools/open-encryption.sh";
-const CLOSE_ENCRYPTION_SCRIPT: &str = "/app-server-tools/manager-tools/close-encryption.sh";
-
-const IS_DEFAULT_ENCRYPTION_PASSWORD_SCRIPT: &str = "/app-server-tools/manager-tools/is-default-encryption-password.sh";
-const CHANGE_ENCRYPTION_PASSWORD_SCRIPT: &str = "/app-server-tools/manager-tools/change-encryption-password.sh";
-
-
 #[derive(thiserror::Error, Debug)]
 pub enum MountError {
     #[error("Getting key failed")]
@@ -54,7 +45,7 @@ impl MountManager {
     }
 
     pub async fn mount_if_needed(&self, provider: &EncryptionKeyProviderConfig) -> Result<(), MountError> {
-        if Path::new(ENCRYPTED_HOME_DIR_LOCATION).exists() {
+        if Path::new(self.config.encrypted_home_location()).exists() {
             info!("Encrypted storage is already mounted");
             // Already mounted.
             return Ok(());
@@ -71,7 +62,7 @@ impl MountManager {
 
         // Open encryption.
         let mut c = Command::new("sudo")
-            .arg(OPEN_ENCRYPTION_SCRIPT)
+            .arg(self.config.script_locations().open_encryption())
             .stdin(Stdio::piped())
             .spawn()
             .into_error(MountError::ProcessStartFailed)?;
@@ -100,7 +91,7 @@ impl MountManager {
     }
 
     pub async fn unmount_if_needed(&self) -> Result<(), MountError> {
-        if !Path::new(ENCRYPTED_HOME_DIR_LOCATION).exists() {
+        if !Path::new(self.config.encrypted_home_location()).exists() {
             info!("Encrypted storage is already unmounted");
             // Already unmounted.
             return Ok(());
@@ -110,7 +101,7 @@ impl MountManager {
 
         // Run command.
         let mut c = Command::new("sudo")
-            .arg(CLOSE_ENCRYPTION_SCRIPT)
+            .arg(self.config.script_locations().close_encryption())
             .status()
             .await
             .into_error(MountError::ProcessStartFailed)?;
@@ -127,14 +118,14 @@ impl MountManager {
 
     async fn change_password_if_needed(&self, key: DataEncryptionKey) -> Result<(), MountError> {
         let c = Command::new("sudo")
-            .arg(IS_DEFAULT_ENCRYPTION_PASSWORD_SCRIPT)
+            .arg(self.config.script_locations().is_default_encryption_password())
             .status()
             .await
             .into_error(MountError::ProcessStartFailed)?;
         if c.success() {
             info!("Default password is used. Password will be changed.");
             let mut c = Command::new("sudo")
-                .arg(CHANGE_ENCRYPTION_PASSWORD_SCRIPT)
+                .arg(self.config.script_locations().change_encryption_password())
                 .stdin(Stdio::piped())
                 .spawn()
                 .into_error(MountError::ProcessStartFailed)?;
