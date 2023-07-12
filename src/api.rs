@@ -42,7 +42,6 @@ pub struct ApiDoc;
 
 // App state getters
 
-
 pub trait GetConfig {
     fn config(&self) -> &Config;
 }

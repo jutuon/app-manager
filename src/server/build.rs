@@ -490,12 +490,15 @@ impl BuildManager {
             }
         }
 
-        let signature_file_name = format!("{}.sig", binary);
+        let signature_file_name = format!("{}.gpg", binary);
         let signature_path = build_dir_for_current.join(&signature_file_name);
-        info!("Signing binary {}", binary);
+        info!("Signing and encrypting binary {}", binary);
         let status = Command::new("gpg")
             .arg("--output")
             .arg(&signature_path)
+            .arg("--encrypt")
+            .arg("--recipient")
+            .arg("app-manager-software-builder")
             .arg("--sign")
             .arg(binary)
             .current_dir(&build_dir_for_current)
@@ -503,7 +506,7 @@ impl BuildManager {
             .await
             .into_error(BuildError::ProcessWaitFailed)?;
         if !status.success() {
-            tracing::error!("Signing binary failed");
+            tracing::error!("Signing and encrypting binary failed");
             return Err(BuildError::CommandFailed(status).into());
         }
 
