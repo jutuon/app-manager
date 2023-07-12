@@ -18,7 +18,7 @@ use crate::{utils::IntoReportExt};
 use self::{
     file::{
         ConfigFile,
-        SocketConfig, ServerEncryptionKey, EncryptionKeyProviderConfig, SoftwareUpdateProviderConfig,
+        SocketConfig, ServerEncryptionKey, EncryptionKeyProviderConfig, SoftwareUpdateProviderConfig, SoftwareBuilderConfig,
     },
 };
 
@@ -85,6 +85,11 @@ impl Config {
             .as_ref()
     }
 
+    pub fn software_builder(&self) -> Option<&SoftwareBuilderConfig> {
+        self.file.software_builder
+            .as_ref()
+    }
+
     pub fn api_key(&self) -> &str {
         &self.file.api_key
     }
@@ -101,7 +106,7 @@ impl Config {
         &self.script_locations
     }
 
-    pub fn encrypted_home_location(&self) -> &Path {
+    pub fn secure_storage_dir(&self) -> &Path {
         &self.file.environment.secure_storage_dir
     }
 }

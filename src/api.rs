@@ -10,7 +10,7 @@ use utoipa::{Modify, OpenApi};
 
 use crate::{
     config::Config,
-    server::{client::{ApiClient, ApiManager}
+    server::{client::{ApiClient, ApiManager}, build::{BuildManager, BuildManagerHandle}
     },
 };
 
@@ -49,4 +49,8 @@ pub trait GetConfig {
 
 pub trait GetApiManager {
     fn api_manager(&self) -> ApiManager;
+}
+
+pub trait GetBuildManager {
+    fn build_manager(&self) -> &BuildManagerHandle;
 }

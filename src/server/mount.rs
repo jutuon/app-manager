@@ -45,7 +45,7 @@ impl MountManager {
     }
 
     pub async fn mount_if_needed(&self, provider: &EncryptionKeyProviderConfig) -> Result<(), MountError> {
-        if Path::new(self.config.encrypted_home_location()).exists() {
+        if Path::new(self.config.secure_storage_dir()).exists() {
             info!("Encrypted storage is already mounted");
             // Already mounted.
             return Ok(());
@@ -91,7 +91,7 @@ impl MountManager {
     }
 
     pub async fn unmount_if_needed(&self) -> Result<(), MountError> {
-        if !Path::new(self.config.encrypted_home_location()).exists() {
+        if !Path::new(self.config.secure_storage_dir()).exists() {
             info!("Encrypted storage is already unmounted");
             // Already unmounted.
             return Ok(());

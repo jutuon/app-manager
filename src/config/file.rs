@@ -40,9 +40,16 @@ scripts_dir = "/app-server-tools/manager-tools"
 # binary_signing_public_key = "binary-key.pub"
 
 # [software_builder]
-# manager_repository_path = "app-manager"
-# backend_repository_path = "app-backend"
-# binary_signing_key = "binary-key.pub"
+# manager_download_key_path = "app-manager.key"
+# manager_download_git_address = "git repository ssh address"
+# manager_branch = "main"
+# manager_binary = "app-manager"
+# manager_pre_build_script = "/path/to/script/app-manager-pre-build.sh" # Optional
+# backend_download_key_path = "app-backend.key"
+# backend_download_git_address = "git repository ssh address"
+# backend_branch = "main"
+# backend_binary = "app-backend"
+# backend_pre_build_script = "/path/to/script/app-backend-pre-build.sh" # Optional
 
 # [reboot_if_needed]
 # time = "12:00"
@@ -111,9 +118,6 @@ impl ConfigFile {
     }
 }
 
-
-
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SocketConfig {
     pub public_api: SocketAddr,
@@ -159,10 +163,18 @@ pub struct SoftwareUpdateProviderConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SoftwareBuilderConfig {
-    pub manager_repository_path: PathBuf,
-    pub backend_repository_path: PathBuf,
-    /// PGP private key
-    pub binary_signing_key: PathBuf,
+    pub manager_download_key_path: PathBuf,
+    pub manager_download_git_address: String,
+    pub manager_branch: String,
+    pub manager_binary: String,
+    /// Optional. Working dir of the script is repository root.
+    pub manager_pre_build_script: Option<PathBuf>,
+    pub backend_download_key_path: PathBuf,
+    pub backend_download_git_address: String,
+    pub backend_branch: String,
+    pub backend_binary: String,
+    /// Optional. Working dir of the script is repository root.
+    pub backend_pre_build_script: Option<PathBuf>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

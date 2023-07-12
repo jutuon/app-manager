@@ -1,6 +1,7 @@
 pub mod app;
 pub mod client;
 pub mod mount;
+pub mod build;
 
 use std::{net::SocketAddr, pin::Pin, sync::Arc, time::Duration};
 
@@ -26,10 +27,10 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
-    api::ApiDoc,
+    api::{ApiDoc, GetBuildManager},
     config::Config,
     server::{
-        app::{App}, client::ApiClient, mount::MountManager,
+        app::{App}, client::ApiClient, mount::MountManager, build::BuildManager,
     },
 };
 
@@ -60,8 +61,15 @@ impl AppServer {
         let (server_quit_handle, server_quit_watcher) = broadcast::channel(1);
         let mut terminate_signal = signal::unix::signal(SignalKind::terminate()).unwrap();
 
+        // Start build manager
+
+        let (build_manager_quit_handle, build_manager_handle) =
+        BuildManager::new(self.config.clone(), server_quit_watcher.resubscribe());
+
+        // Create app
+
         let api_client = ApiClient::new(&self.config).unwrap().into();
-        let mut app = App::new(self.config.clone(), api_client).await;
+        let mut app = App::new(self.config.clone(), api_client, build_manager_handle.into()).await;
 
         // Start API server
 
@@ -96,6 +104,19 @@ impl AppServer {
             }
         }
 
+        // Build new version if needed
+
+        if self.config.software_builder().is_some() {
+            match app.state().build_manager().send_build_new_backend_version().await {
+                Ok(()) => {
+                    info!("Build finished");
+                }
+                Err(e) => {
+                    warn!("Build failed. Error: {:?}", e);
+                }
+            }
+        }
+
         // Wait until quit signal
         Self::wait_quit_signal(&mut terminate_signal).await;
 
@@ -110,6 +131,7 @@ impl AppServer {
             .await
             .expect("Manager API server task panic detected");
 
+        build_manager_quit_handle.wait_quit().await;
 
         drop(app);
 
