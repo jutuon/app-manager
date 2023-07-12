@@ -7,7 +7,7 @@ use tokio::{task::JoinHandle, sync::mpsc, process::Command};
 use tracing::{info, warn};
 use url::Url;
 
-use crate::{config::{Config, file::SoftwareBuilderConfig}, utils::IntoReportExt};
+use crate::{config::{Config, file::SoftwareBuilderConfig}, utils::IntoReportExt, api::manager::data::{DownloadType, SoftwareOptions, BuildInfo}};
 
 use super::ServerQuitWatcher;
 
@@ -47,6 +47,9 @@ pub enum BuildError {
 
     #[error("Invalid input")]
     InvalidInput,
+
+    #[error("Build manager is not available")]
+    BuildManagerNotAvailable,
 }
 
 #[derive(Debug)]
@@ -77,9 +80,24 @@ pub struct BuildManagerHandle {
 }
 
 impl BuildManagerHandle {
+    pub async fn send_build_request(&self, software: SoftwareOptions) -> Result<(), BuildError> {
+        match software {
+            SoftwareOptions::Manager => {
+                self.sender.try_send(BuildManagerMessage::BuildNewManagerVersion)
+                    .into_error(BuildError::BuildManagerNotAvailable)?;
+            }
+            SoftwareOptions::Backend => {
+                self.sender.try_send(BuildManagerMessage::BuildNewBackendVersion)
+                    .into_error(BuildError::BuildManagerNotAvailable)?;
+            }
+        }
+
+        Ok(())
+    }
+
     pub async fn send_build_new_backend_version(&self) -> Result<(), BuildError> {
-        self.sender.send(BuildManagerMessage::BuildNewBackendVersion).await
-            .into_error(BuildError::ProcessStdinFailed)?;
+        self.sender.try_send(BuildManagerMessage::BuildNewBackendVersion)
+            .into_error(BuildError::BuildManagerNotAvailable)?;
 
         Ok(())
     }
@@ -490,7 +508,7 @@ impl BuildManager {
             }
         }
 
-        let signature_file_name = format!("{}.gpg", binary);
+        let signature_file_name = BuildDirCreator::encrypted_binary_name(binary);
         let signature_path = build_dir_for_current.join(&signature_file_name);
         info!("Signing and encrypting binary {}", binary);
         let status = Command::new("gpg")
@@ -515,7 +533,7 @@ impl BuildManager {
             name: repository_name.to_string(),
             timestamp: current_time.to_string(),
         };
-        let build_info_file = format!("{binary}.json");
+        let build_info_file = BuildDirCreator::build_info_json_name(binary);
         let build_info_path = build_dir_for_current.join(&build_info_file);
         tokio::fs::write(&build_info_path, serde_json::to_string_pretty(&build_info).into_error(BuildError::FileWritingFailed)?)
             .await
@@ -635,11 +653,39 @@ impl BuildDirCreator {
 
         dir
     }
-}
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct BuildInfo {
-    pub commit_sha: String,
-    pub name: String,
-    pub timestamp: String,
+    pub fn encrypted_binary_name(binary: &str) -> String {
+        format!("{}.gpg", binary)
+    }
+
+    pub fn build_info_json_name(binary: &str) -> String {
+        format!("{}.json", binary)
+    }
+
+    pub async fn get_data(config: &Config, software: SoftwareOptions, download: DownloadType) -> Result<Vec<u8>, BuildError> {
+        let builder_config = config.software_builder()
+            .ok_or(BuildError::SoftwareBuilderConfigMissing)?;
+
+        let binary = match software {
+            SoftwareOptions::Manager => &builder_config.manager_binary,
+            SoftwareOptions::Backend => &builder_config.backend_binary
+        };
+
+        let latest_dir = Self::create_latest_dir_if_needed(config);
+
+        match download {
+            DownloadType::EncryptedBinary => {
+                let binary_path = latest_dir.join(Self::encrypted_binary_name(binary));
+                tokio::fs::read(&binary_path)
+                    .await
+                    .into_error(BuildError::FileReadingFailed)
+            }
+            DownloadType::Info => {
+                let path = latest_dir.join(Self::build_info_json_name(binary));
+                tokio::fs::read(&path)
+                    .await
+                    .into_error(BuildError::FileReadingFailed)
+            }
+        }
+    }
 }

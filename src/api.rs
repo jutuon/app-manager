@@ -26,10 +26,21 @@ pub const PATH_PREFIX: &str = "/api/v1/";
 #[openapi(
     paths(
         manager::get_encryption_key,
+        manager::get_software_info,
+        manager::get_latest_software,
+        manager::post_request_build_software,
+        manager::post_request_software_update,
     ),
     components(schemas(
         manager::data::DataEncryptionKey,
         manager::data::ServerNameText,
+        manager::data::SoftwareOptions,
+        manager::data::SoftwareOptionsQueryParam,
+        manager::data::DownloadType,
+        manager::data::DownloadTypeQueryParam,
+        manager::data::RebootQueryParam,
+        manager::data::SoftwareInfo,
+        manager::data::BuildInfo,
     )),
     modifiers(&SecurityApiTokenDefault),
     info(
