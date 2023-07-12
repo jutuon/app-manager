@@ -2,6 +2,8 @@ pub mod app;
 pub mod client;
 pub mod mount;
 pub mod build;
+pub mod reboot;
+pub mod update;
 
 use std::{net::SocketAddr, pin::Pin, sync::Arc, time::Duration};
 
@@ -64,7 +66,18 @@ impl AppServer {
         // Start build manager
 
         let (build_manager_quit_handle, build_manager_handle) =
-        BuildManager::new(self.config.clone(), server_quit_watcher.resubscribe());
+            BuildManager::new(
+                self.config.clone(),
+                server_quit_watcher.resubscribe()
+            );
+
+        // Start reboot manager
+
+        let (reboot_manager_quit_handle, reboot_manager_handle) =
+            reboot::RebootManager::new(
+                self.config.clone(),
+                server_quit_watcher.resubscribe(),
+            );
 
         // Create app
 
@@ -132,6 +145,7 @@ impl AppServer {
             .expect("Manager API server task panic detected");
 
         build_manager_quit_handle.wait_quit().await;
+        reboot_manager_quit_handle.wait_quit().await;
 
         drop(app);
 

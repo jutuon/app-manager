@@ -42,8 +42,7 @@ error-stack = "0.2.3"
 
 async-trait = "0.1.66"
 
-
-time = "0.3.20"
+time = { version = "0.3.20" }
 
 api_client = { path = "./api_client" }
 

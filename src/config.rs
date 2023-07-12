@@ -18,7 +18,7 @@ use crate::{utils::IntoReportExt};
 use self::{
     file::{
         ConfigFile,
-        SocketConfig, ServerEncryptionKey, EncryptionKeyProviderConfig, SoftwareUpdateProviderConfig, SoftwareBuilderConfig,
+        SocketConfig, ServerEncryptionKey, EncryptionKeyProviderConfig, SoftwareUpdateProviderConfig, SoftwareBuilderConfig, RebootIfNeededConfig,
     },
 };
 
@@ -108,6 +108,10 @@ impl Config {
 
     pub fn secure_storage_dir(&self) -> &Path {
         &self.file.environment.secure_storage_dir
+    }
+
+    pub fn reboot_if_needed(&self) -> &Option<RebootIfNeededConfig> {
+        &self.file.reboot_if_needed
     }
 }
 
