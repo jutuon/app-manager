@@ -12,6 +12,7 @@ use error_stack::{IntoReport, Result, ResultExt};
 use reqwest::Url;
 use rustls_pemfile::{certs, rsa_private_keys};
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
+use tracing::{info, log::warn};
 
 use crate::{utils::IntoReportExt};
 
@@ -64,6 +65,7 @@ impl Config {
     /// Debug mode changes:
     /// * Swagger UI is enabled.
     /// * Disabling HTTPS is possbile.
+    /// * Checking available scripts is disabled.
     pub fn debug_mode(&self) -> bool {
         self.file.debug.unwrap_or(false)
     }
@@ -142,7 +144,7 @@ pub fn get_config() -> Result<Config, GetConfigError> {
     }
 
     let script_locations =
-        check_script_locations(&file_config.environment.scripts_dir)?;
+        check_script_locations(&file_config.environment.scripts_dir, file_config.debug.unwrap_or_default())?;
 
     Ok(Config {
         file: file_config,
@@ -152,7 +154,7 @@ pub fn get_config() -> Result<Config, GetConfigError> {
     })
 }
 
-fn check_script_locations(script_dir: &Path) -> Result<ScriptLocations, GetConfigError> {
+fn check_script_locations(script_dir: &Path, is_debug: bool) -> Result<ScriptLocations, GetConfigError> {
     let open_encryption = script_dir.join("open-encryption.sh");
     let close_encryption = script_dir.join("close-encryption.sh");
     let is_default_encryption_password = script_dir.join("is-default-encryption-password.sh");
@@ -173,7 +175,12 @@ fn check_script_locations(script_dir: &Path) -> Result<ScriptLocations, GetConfi
         errors.push(format!("Script not found: {}", change_encryption_password.display()));
     }
 
-    if errors.is_empty() {
+    if errors.is_empty() || is_debug {
+        if errors.is_empty() {
+            info!("All scripts found");
+        } else {
+            warn!("Some scripts are missing.\n{}", errors.join("\n"));
+        }
         Ok(ScriptLocations {
             open_encryption,
             close_encryption,
