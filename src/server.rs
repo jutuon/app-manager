@@ -79,6 +79,14 @@ impl AppServer {
                 server_quit_watcher.resubscribe(),
             );
 
+        // Start update manager
+
+        let (update_manager_quit_handle, update_manager_handle) =
+            update::UpdateManager::new(
+                self.config.clone(),
+                server_quit_watcher.resubscribe(),
+            );
+
         // Create app
 
         let api_client = ApiClient::new(&self.config).unwrap().into();
@@ -146,6 +154,7 @@ impl AppServer {
 
         build_manager_quit_handle.wait_quit().await;
         reboot_manager_quit_handle.wait_quit().await;
+        update_manager_quit_handle.wait_quit().await;
 
         drop(app);
 
