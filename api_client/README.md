@@ -26,12 +26,23 @@ All URIs are relative to *http://localhost*
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *ManagerApi* | [**get_encryption_key**](docs/ManagerApi.md#get_encryption_key) | **GET** /manager_api/encryption_key/{server} | Get encryption key for some server
+*ManagerApi* | [**get_latest_software**](docs/ManagerApi.md#get_latest_software) | **GET** /manager_api/latest_software | Download latest software
+*ManagerApi* | [**get_software_info**](docs/ManagerApi.md#get_software_info) | **GET** /manager_api/software_info | Get current software info about currently installed backend and manager.
+*ManagerApi* | [**post_request_build_software**](docs/ManagerApi.md#post_request_build_software) | **POST** /manager_api/request_build_software | Request building the latest software from git.
+*ManagerApi* | [**post_request_software_update**](docs/ManagerApi.md#post_request_software_update) | **POST** /manager_api/request_software_update | Request software update.
 
 
 ## Documentation For Models
 
+ - [BuildInfo](docs/BuildInfo.md)
  - [DataEncryptionKey](docs/DataEncryptionKey.md)
+ - [DownloadType](docs/DownloadType.md)
+ - [DownloadTypeQueryParam](docs/DownloadTypeQueryParam.md)
+ - [RebootQueryParam](docs/RebootQueryParam.md)
  - [ServerNameText](docs/ServerNameText.md)
+ - [SoftwareInfo](docs/SoftwareInfo.md)
+ - [SoftwareOptions](docs/SoftwareOptions.md)
+ - [SoftwareOptionsQueryParam](docs/SoftwareOptionsQueryParam.md)
 
 
 To get access to the crate's generated documentation, use:
@@ -41,3 +52,6 @@ cargo doc --open
 ```
 
 ## Author
+
+
+
