@@ -13,6 +13,10 @@ use super::ServerQuitWatcher;
 
 use error_stack::Result;
 
+pub const MANAGER_REPOSITORY_NAME: &str = "manager";
+pub const BACKEND_REPOSITORY_NAME: &str = "backend";
+pub const GPG_KEY_NAME: &str = "app-manager-software-builder";
+
 #[derive(thiserror::Error, Debug)]
 pub enum BuildError {
     #[error("Software builder config is missing")]
@@ -196,7 +200,7 @@ impl BuildManager {
     }
 
     pub fn manager_repository_name(&self) -> &'static str {
-        "manager"
+        MANAGER_REPOSITORY_NAME
     }
 
     pub fn manager_repository(&self) -> PathBuf {
@@ -204,7 +208,7 @@ impl BuildManager {
     }
 
     pub fn backend_repository_name(&self) -> &'static str {
-        "backend"
+        BACKEND_REPOSITORY_NAME
     }
 
     pub fn backend_repository(&self) -> PathBuf {
@@ -494,7 +498,7 @@ impl BuildManager {
                 .arg("--passphrase")
                 .arg("")
                 .arg("--quick-generate-key")
-                .arg("app-manager-software-builder")
+                .arg(GPG_KEY_NAME)
                 .arg("default")
                 .arg("default")
                 .arg("none")
@@ -516,7 +520,7 @@ impl BuildManager {
             .arg(&signature_path)
             .arg("--encrypt")
             .arg("--recipient")
-            .arg("app-manager-software-builder")
+            .arg(GPG_KEY_NAME)
             .arg("--sign")
             .arg(binary)
             .current_dir(&build_dir_for_current)

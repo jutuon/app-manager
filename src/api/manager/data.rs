@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
+use crate::server::build::{MANAGER_REPOSITORY_NAME, BACKEND_REPOSITORY_NAME};
+
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Default, PartialEq, Eq)]
 pub struct DataEncryptionKey {
@@ -24,6 +26,15 @@ pub enum SoftwareOptions {
     Backend,
 }
 
+impl SoftwareOptions {
+    pub fn to_str(&self) -> &'static str {
+        match self {
+            Self::Manager => MANAGER_REPOSITORY_NAME,
+            Self::Backend => BACKEND_REPOSITORY_NAME,
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
 pub struct DownloadTypeQueryParam {
     pub download_type: DownloadType,
@@ -31,7 +42,7 @@ pub struct DownloadTypeQueryParam {
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, ToSchema)]
 pub enum DownloadType {
-    /// HTTP GET returns JSON with software info.
+    /// HTTP GET returns BuildInfo JSON.
     Info,
     /// HTTP GET returns encrypted binary.
     EncryptedBinary,
@@ -48,7 +59,7 @@ pub struct SoftwareInfo {
     pub current_software: Vec<BuildInfo>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, ToSchema)]
 pub struct BuildInfo {
     pub commit_sha: String,
     pub name: String,

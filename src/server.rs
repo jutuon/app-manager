@@ -4,6 +4,7 @@ pub mod mount;
 pub mod build;
 pub mod reboot;
 pub mod update;
+pub mod backend_controller;
 
 use std::{net::SocketAddr, pin::Pin, sync::Arc, time::Duration};
 
@@ -25,14 +26,14 @@ use tokio_rustls::TlsAcceptor;
 use tower::{MakeService};
 use tower_http::trace::{TraceLayer};
 use tracing::{error, info, log::warn};
-use utoipa::OpenApi;
+use utoipa::{OpenApi, openapi::info};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
-    api::{ApiDoc, GetBuildManager},
+    api::{ApiDoc, GetBuildManager, GetUpdateManager},
     config::Config,
     server::{
-        app::{App}, client::ApiClient, mount::MountManager, build::BuildManager,
+        app::{App}, client::ApiClient, mount::MountManager, build::BuildManager, backend_controller::BackendController,
     },
 };
 
@@ -79,18 +80,23 @@ impl AppServer {
                 server_quit_watcher.resubscribe(),
             );
 
+        // Create API client
+
+        let api_client: Arc<ApiClient> = ApiClient::new(&self.config).unwrap().into();
+
         // Start update manager
 
         let (update_manager_quit_handle, update_manager_handle) =
             update::UpdateManager::new(
                 self.config.clone(),
                 server_quit_watcher.resubscribe(),
+                api_client.clone(),
+                reboot_manager_handle,
             );
 
         // Create app
 
-        let api_client = ApiClient::new(&self.config).unwrap().into();
-        let mut app = App::new(self.config.clone(), api_client, build_manager_handle.into()).await;
+        let mut app = App::new(self.config.clone(), api_client, build_manager_handle.into(), update_manager_handle.into()).await;
 
         // Start API server
 
@@ -130,10 +136,39 @@ impl AppServer {
         if self.config.software_builder().is_some() {
             match app.state().build_manager().send_build_new_backend_version().await {
                 Ok(()) => {
-                    info!("Build finished");
+                    info!("Build requested");
                 }
                 Err(e) => {
-                    warn!("Build failed. Error: {:?}", e);
+                    warn!("Build request sending failed. Error: {:?}", e);
+                }
+            }
+        }
+
+        // Install latest backend binary if it is not installed
+
+        if let Some(update_config) = self.config.software_update_provider() {
+            if !update_config.backend_install_location.exists() {
+                info!("Backend is not installed. Downloading latest software");
+
+                match app.state().update_manager().send_update_backend_request(false).await {
+                    Ok(()) => {
+                        info!("Backend installation requested");
+                    }
+                    Err(e) => {
+                        warn!("Backend installation requesting failed. Error: {:?}", e);
+                    }
+                }
+            }
+
+            // Start backend
+
+            info!("Starting backend");
+            match BackendController::new(&self.config).start_backend().await {
+                Ok(()) => {
+                    info!("Backend started");
+                }
+                Err(e) => {
+                    warn!("Backend start failed. Error: {:?}", e);
                 }
             }
         }
@@ -155,6 +190,18 @@ impl AppServer {
         build_manager_quit_handle.wait_quit().await;
         reboot_manager_quit_handle.wait_quit().await;
         update_manager_quit_handle.wait_quit().await;
+
+        if self.config.software_update_provider().is_some() {
+            info!("Stopping backend");
+            match BackendController::new(&self.config).stop_backend().await {
+                Ok(()) => {
+                    info!("Backend stopped");
+                }
+                Err(e) => {
+                    warn!("Backend stopping failed. Error: {:?}", e);
+                }
+            }
+        }
 
         drop(app);
 

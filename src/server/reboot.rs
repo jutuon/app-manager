@@ -69,7 +69,7 @@ pub enum RebootManagerMessage {
     RebootNow,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RebootManagerHandle {
     sender: mpsc::Sender<RebootManagerMessage>,
 }

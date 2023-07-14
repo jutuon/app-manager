@@ -7,11 +7,11 @@ use axum::{Json, TypedHeader, extract::{Path, ConnectInfo, Query}, Extension};
 use futures::FutureExt;
 use hyper::StatusCode;
 
-use crate::server::build::BuildDirCreator;
+use crate::server::{build::BuildDirCreator, update::UpdateDirCreator};
 
 use self::data::{DataEncryptionKey, ServerNameText, DownloadTypeQueryParam, SoftwareOptionsQueryParam, RebootQueryParam, SoftwareInfo};
 
-use super::{GetConfig, GetBuildManager};
+use super::{GetConfig, GetBuildManager, GetUpdateManager};
 
 use tracing::{error, info};
 
@@ -52,7 +52,10 @@ pub async fn get_encryption_key<S: GetConfig>(
 
 pub const PATH_GET_LATEST_SOFTWARE: &str = "/manager_api/latest_software";
 
-/// Download latest software
+/// Download latest software.
+///
+/// Returns BuildInfo JSON or encrypted binary depending on
+/// DownloadTypeQueryParam value.
 #[utoipa::path(
     get,
     path = "/manager_api/latest_software",
@@ -138,7 +141,7 @@ pub const PATH_POST_RQUEST_SOFTWARE_UPDATE: &str = "/manager_api/request_softwar
     ),
     security(("api_key" = [])),
 )]
-pub async fn post_request_software_update<S: GetConfig>(
+pub async fn post_request_software_update<S: GetConfig + GetUpdateManager>(
     Query(software): Query<SoftwareOptionsQueryParam>,
     Query(reboot): Query<RebootQueryParam>,
     ConnectInfo(client): ConnectInfo<SocketAddr>,
@@ -151,7 +154,22 @@ pub async fn post_request_software_update<S: GetConfig>(
         reboot.reboot,
     );
 
-    Ok(()) // TODO
+    match software.software_options {
+        data::SoftwareOptions::Manager => {
+            state.update_manager().send_update_manager_request(reboot.reboot).await.map_err(|e| {
+                error!("{e:?}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+        },
+        data::SoftwareOptions::Backend => {
+            state.update_manager().send_update_backend_request(reboot.reboot).await.map_err(|e| {
+                error!("{e:?}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+        },
+    }
+
+    Ok(())
 }
 
 pub const PATH_GET_SOFTWARE_INFO: &str = "/manager_api/software_info";
@@ -175,5 +193,10 @@ pub async fn get_software_info<S: GetConfig>(
         client,
     );
 
-    Ok(SoftwareInfo { current_software: vec![]}.into()) // TODO
+    let info = UpdateDirCreator::current_software(state.config()).await.map_err(|e| {
+        error!("{e:?}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(info.into())
 }

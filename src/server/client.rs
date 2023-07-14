@@ -1,13 +1,13 @@
 
 use std::{net::SocketAddr, io::BufReader};
 
-use api_client::{apis::{configuration::{Configuration, ApiKey}, manager_api::get_encryption_key}, models::DataEncryptionKey};
+use api_client::{apis::{configuration::{Configuration, ApiKey}, manager_api::get_encryption_key}, models::DataEncryptionKey, manual_additions::get_latest_software_fixed};
 use reqwest::Certificate;
 use tracing::info;
 use tracing_subscriber::fmt::format;
 use url::Url;
 
-use crate::{config::{Config}, api::{self,}, utils::IntoReportExt};
+use crate::{config::{Config}, api::{self, manager::data::{SoftwareInfo, SoftwareOptions, BuildInfo},}, utils::IntoReportExt};
 
 use error_stack::{Result, ResultExt, IntoReport};
 
@@ -97,7 +97,7 @@ impl ApiClient {
     }
 
     pub fn software_update_provider_config(&self) -> Result<&Configuration, ApiError> {
-        self.encryption_key_provider
+        self.software_update_provider
             .as_ref()
             .ok_or(ApiError::ManagerApiUrlNotConfigured("software_update_provider_config").into())
     }
@@ -131,5 +131,44 @@ impl<'a> ApiManager<'a> {
         ).await.into_error(ApiError::ApiRequest)?;
 
         Ok(DataEncryptionKey { key: key.key })
+    }
+
+    pub async fn get_latest_build_info(
+        &self,
+        options: SoftwareOptions,
+    ) -> Result<BuildInfo, ApiError> {
+        let converted_options = match options {
+            SoftwareOptions::Manager => api_client::models::SoftwareOptions::Manager,
+            SoftwareOptions::Backend => api_client::models::SoftwareOptions::Backend,
+        };
+
+        let info_json = get_latest_software_fixed(
+            self.api_client.software_update_provider_config()?,
+            converted_options,
+            api_client::models::DownloadType::Info,
+        ).await.into_error(ApiError::ApiRequest)?;
+
+        let info: BuildInfo = serde_json::from_slice(&info_json)
+            .into_error(ApiError::InvalidValue)?;
+
+        Ok(info)
+    }
+
+    pub async fn get_latest_encrypted_software_binary(
+        &self,
+        options: SoftwareOptions,
+    ) -> Result<Vec<u8>, ApiError> {
+        let converted_options = match options {
+            SoftwareOptions::Manager => api_client::models::SoftwareOptions::Manager,
+            SoftwareOptions::Backend => api_client::models::SoftwareOptions::Backend,
+        };
+
+        let binary = get_latest_software_fixed(
+            self.api_client.software_update_provider_config()?,
+            converted_options,
+            api_client::models::DownloadType::EncryptedBinary,
+        ).await.into_error(ApiError::ApiRequest)?;
+
+        Ok(binary)
     }
 }

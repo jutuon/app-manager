@@ -12,20 +12,21 @@ use utoipa::OpenApi;
 
 use crate::{
     api::{
-        self, ApiDoc, GetConfig, GetApiManager, GetBuildManager,
+        self, ApiDoc, GetConfig, GetApiManager, GetBuildManager, GetUpdateManager,
     },
     config::Config,
 };
 
 use self::private_routers::PrivateRoutes;
 
-use super::{client::{ApiManager, ApiClient}, build::BuildManagerHandle};
+use super::{client::{ApiManager, ApiClient}, build::BuildManagerHandle, update::{UpdateManagerHandle, self}};
 
 #[derive(Clone)]
 pub struct AppState {
     config: Arc<Config>,
     api: Arc<ApiClient>,
     build_manager: Arc<BuildManagerHandle>,
+    update_manager: Arc<UpdateManagerHandle>,
 }
 
 impl GetConfig for AppState {
@@ -37,6 +38,12 @@ impl GetConfig for AppState {
 impl GetBuildManager for AppState {
     fn build_manager(&self) -> &BuildManagerHandle {
         &self.build_manager
+    }
+}
+
+impl GetUpdateManager for AppState {
+    fn update_manager(&self) -> &super::update::UpdateManagerHandle {
+        &self.update_manager
     }
 }
 
@@ -58,11 +65,13 @@ impl App {
         config: Arc<Config>,
         api_client: Arc<ApiClient>,
         build_manager: Arc<BuildManagerHandle>,
+        update_manager: Arc<UpdateManagerHandle>,
     ) -> Self {
         let state = AppState {
             config: config.clone(),
             api: api_client.clone(),
             build_manager,
+            update_manager,
         };
 
         Self {

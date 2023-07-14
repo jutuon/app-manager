@@ -21,14 +21,14 @@ pub const DEFAULT_CONFIG_FILE_TEXT: &str = r#"
 # api_key = "password"
 
 [socket]
-public_api = "127.0.0.1:4000"
+public_api = "127.0.0.1:5000"
 
 [environment]
 secure_storage_dir = "/app-secure-storage/app"
 scripts_dir = "/app-server-tools/manager-tools"
 
 # [encryption_key_provider]
-# manager_base_url = "http://127.0.0.1:4000"
+# manager_base_url = "http://127.0.0.1:5000"
 # key_name = "test-server"
 
 # [[server_encryption_keys]]
@@ -36,8 +36,10 @@ scripts_dir = "/app-server-tools/manager-tools"
 # key_path = "data-key.key"
 
 # [software_update_provider]
-# manager_base_url = "http://127.0.0.1:4000"
+# manager_base_url = "http://127.0.0.1:5000"
 # binary_signing_public_key = "binary-key.pub"
+# manager_install_location = "/home/app/binaries/app-manager"
+# backend_install_location = "/app-secure-storage/app/binaries/app-backend"
 
 # [software_builder]
 # manager_download_key_path = "app-manager.key"
@@ -73,7 +75,9 @@ pub enum ConfigFileError {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ConfigFile {
     pub debug: Option<bool>,
-    /// API key for manager API
+    /// API key for manager API. All managers instances must use the same key.
+    ///
+    /// If the key is wrong the API access is denied untill manager is restarted.
     pub api_key: String,
     pub server_encryption_keys: Option<Vec<ServerEncryptionKey>>,
     pub encryption_key_provider: Option<EncryptionKeyProviderConfig>,
@@ -156,9 +160,12 @@ pub struct EncryptionKeyProviderConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SoftwareUpdateProviderConfig {
+    /// Manager instance URL which is used to check if new software is available.
     pub manager_base_url: Url,
-    /// PGP public key
+    /// GPG public key
     pub binary_signing_public_key: PathBuf,
+    pub manager_install_location: PathBuf,
+    pub backend_install_location: PathBuf,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
