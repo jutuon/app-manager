@@ -71,6 +71,7 @@ pub enum UpdateError {
 #[derive(Debug)]
 pub struct UpdateManagerQuitHandle {
     task: JoinHandle<()>,
+    sender: mpsc::Sender<UpdateManagerMessage>,
 }
 
 impl UpdateManagerQuitHandle {
@@ -145,6 +146,7 @@ impl UpdateManager {
 
         let quit_handle = UpdateManagerQuitHandle {
             task,
+            sender: handle.sender.clone(),
         };
 
         (quit_handle, handle)
@@ -157,7 +159,15 @@ impl UpdateManager {
         loop {
             tokio::select! {
                 message = self.receiver.recv() => {
-                    self.handle_message(message).await;
+                    match message {
+                        Some(message) => {
+                            self.handle_message(message).await;
+                        }
+                        None => {
+                            warn!("Update manager channel closed");
+                            return;
+                        }
+                    }
                 }
                 _ = quit_notification.recv() => {
                     return;
@@ -168,10 +178,10 @@ impl UpdateManager {
 
     pub async fn handle_message(
         &self,
-        message: Option<UpdateManagerMessage>,
+        message: UpdateManagerMessage,
     ) {
         match message {
-            Some(UpdateManagerMessage::UpdateSoftware { force_reboot, software }) => {
+            UpdateManagerMessage::UpdateSoftware { force_reboot, software } => {
                 match self.update_software(force_reboot, software).await {
                     Ok(()) => {
                         info!("Software update finished");
@@ -180,9 +190,6 @@ impl UpdateManager {
                         warn!("Software update failed. Error: {:?}", e);
                     }
                 }
-            }
-            None => {
-                warn!("Update manager channel closed");
             }
         }
     }

@@ -59,6 +59,7 @@ pub enum BuildError {
 #[derive(Debug)]
 pub struct BuildManagerQuitHandle {
     task: JoinHandle<()>,
+    sender: mpsc::Sender<BuildManagerMessage>,
 }
 
 impl BuildManagerQuitHandle {
@@ -133,6 +134,7 @@ impl BuildManager {
 
         let quit_handle = BuildManagerQuitHandle {
             task,
+            sender: handle.sender.clone(),
         };
 
         (quit_handle, handle)
@@ -145,7 +147,15 @@ impl BuildManager {
         loop {
             tokio::select! {
                 message = self.receiver.recv() => {
-                    self.handle_message(message).await;
+                    match message {
+                        Some(message) => {
+                            self.handle_message(message).await;
+                        }
+                        None => {
+                            warn!("Build manager channel closed");
+                            return;
+                        }
+                    }
                 }
                 _ = quit_notification.recv() => {
                     return;
@@ -156,10 +166,10 @@ impl BuildManager {
 
     pub async fn handle_message(
         &self,
-        message: Option<BuildManagerMessage>,
+        message: BuildManagerMessage,
     ) {
         match message {
-            Some(BuildManagerMessage::BuildNewBackendVersion) => {
+            BuildManagerMessage::BuildNewBackendVersion => {
                 info!("Building backend version");
                 match self.git_refresh_backend_if_needed().await {
                     Ok(()) => {
@@ -170,7 +180,7 @@ impl BuildManager {
                     }
                 }
             }
-            Some(BuildManagerMessage::BuildNewManagerVersion) => {
+            BuildManagerMessage::BuildNewManagerVersion => {
                 info!("Building manager version");
                 match self.git_refresh_manager_if_needed().await {
                     Ok(()) => {
@@ -180,9 +190,6 @@ impl BuildManager {
                         warn!("Build failed. Error: {:?}", e);
                     }
                 }
-            }
-            None => {
-                warn!("Build manager channel closed");
             }
         }
     }

@@ -51,6 +51,7 @@ pub enum RebootError {
 #[derive(Debug)]
 pub struct RebootManagerQuitHandle {
     task: JoinHandle<()>,
+    sender: mpsc::Sender<RebootManagerMessage>,
 }
 
 impl RebootManagerQuitHandle {
@@ -110,6 +111,7 @@ impl RebootManager {
 
         let quit_handle = RebootManagerQuitHandle {
             task,
+            sender: handle.sender.clone(),
         };
 
         (quit_handle, handle)
@@ -143,7 +145,15 @@ impl RebootManager {
                     check_cooldown = true;
                 }
                 message = self.receiver.recv() => {
-                    self.handle_message(message).await;
+                    match message {
+                        Some(message) => {
+                            self.handle_message(message).await;
+                        }
+                        None => {
+                            warn!("Reboot manager channel closed");
+                            return;
+                        }
+                    }
                 }
                 _ = quit_notification.recv() => {
                     return;
@@ -154,10 +164,10 @@ impl RebootManager {
 
     pub async fn handle_message(
         &self,
-        message: Option<RebootManagerMessage>,
+        message: RebootManagerMessage,
     ) {
         match message {
-            Some(RebootManagerMessage::RebootNow) => {
+            RebootManagerMessage::RebootNow => {
                 match self.run_reboot().await {
                     Ok(()) => {
                         info!("Reboot successful");
@@ -166,9 +176,6 @@ impl RebootManager {
                         warn!("Reboot failed. Error: {:?}", e);
                     }
                 }
-            }
-            None => {
-                warn!("Reboot manager channel closed");
             }
         }
     }
