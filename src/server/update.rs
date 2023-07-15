@@ -369,7 +369,7 @@ impl UpdateManager {
 
         let status = Command::new("chmod")
             .arg("u+x")
-            .arg(&binary)
+            .arg(&target)
             .status()
             .await
             .into_error(UpdateError::ProcessWaitFailed)?;
