@@ -310,6 +310,13 @@ impl UpdateManager {
     }
 
     pub async fn decrypt_encrypted_binary(&self, encrypted: &Path, decrypted: &Path) -> Result<(), UpdateError> {
+        if decrypted.exists() {
+            info!("Remove previous binary {}", decrypted.display());
+            tokio::fs::remove_file(&decrypted)
+                .await
+                .into_error(UpdateError::FileRemovingFailed)?;
+        }
+
         info!("Decrypting binary {}", encrypted.display());
         let status = Command::new("gpg")
             .arg("--output")
