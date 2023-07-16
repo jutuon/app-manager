@@ -1,13 +1,13 @@
 
-use std::{net::SocketAddr, io::BufReader};
+use std::{net::SocketAddr, io::BufReader, collections::VecDeque};
 
-use manager_api_client::{apis::{configuration::{Configuration, ApiKey}, manager_api::get_encryption_key}, models::DataEncryptionKey, manual_additions::get_latest_software_fixed};
+use manager_api_client::{apis::{configuration::{Configuration, ApiKey}, manager_api::{get_encryption_key, post_request_build_software}}, models::DataEncryptionKey, manual_additions::get_latest_software_fixed};
 use reqwest::Certificate;
 use tracing::info;
 use tracing_subscriber::fmt::format;
 use url::Url;
 
-use crate::{config::{Config}, api::{self, manager::data::{SoftwareInfo, SoftwareOptions, BuildInfo},}, utils::IntoReportExt};
+use crate::{config::{Config, file::SoftwareUpdateProviderConfig}, api::{self, manager::data::{SoftwareInfo, SoftwareOptions, BuildInfo},}, utils::IntoReportExt};
 
 use error_stack::{Result, ResultExt, IntoReport};
 
@@ -133,24 +133,29 @@ impl<'a> ApiManager<'a> {
         Ok(DataEncryptionKey { key: key.key })
     }
 
-    pub async fn get_latest_build_info(
+    pub async fn get_latest_build_info_raw(
         &self,
         options: SoftwareOptions,
-    ) -> Result<BuildInfo, ApiError> {
+    ) -> Result<Vec<u8>, ApiError> {
         let converted_options = match options {
             SoftwareOptions::Manager => manager_api_client::models::SoftwareOptions::Manager,
             SoftwareOptions::Backend => manager_api_client::models::SoftwareOptions::Backend,
         };
 
-        let info_json = get_latest_software_fixed(
+        get_latest_software_fixed(
             self.api_client.software_update_provider_config()?,
             converted_options,
             manager_api_client::models::DownloadType::Info,
-        ).await.into_error(ApiError::ApiRequest)?;
+        ).await.into_error(ApiError::ApiRequest)
+    }
 
+    pub async fn get_latest_build_info(
+        &self,
+        options: SoftwareOptions,
+    ) -> Result<BuildInfo, ApiError> {
+        let info_json = self.get_latest_build_info_raw(options).await?;
         let info: BuildInfo = serde_json::from_slice(&info_json)
             .into_error(ApiError::InvalidValue)?;
-
         Ok(info)
     }
 
@@ -170,5 +175,20 @@ impl<'a> ApiManager<'a> {
         ).await.into_error(ApiError::ApiRequest)?;
 
         Ok(binary)
+    }
+
+    pub async fn request_build_software_from_build_server(
+        &self,
+        options: SoftwareOptions,
+    ) -> Result<(), ApiError> {
+        let converted_options = match options {
+            SoftwareOptions::Manager => manager_api_client::models::SoftwareOptions::Manager,
+            SoftwareOptions::Backend => manager_api_client::models::SoftwareOptions::Backend,
+        };
+
+        post_request_build_software(
+            self.api_client.software_update_provider_config()?,
+            converted_options,
+        ).await.into_error(ApiError::ApiRequest)
     }
 }

@@ -11,7 +11,7 @@ use crate::server::{build::BuildDirCreator, update::UpdateDirCreator};
 
 use self::data::{DataEncryptionKey, ServerNameText, DownloadTypeQueryParam, SoftwareOptionsQueryParam, RebootQueryParam, SoftwareInfo};
 
-use super::{GetConfig, GetBuildManager, GetUpdateManager};
+use super::{GetConfig, GetBuildManager, GetUpdateManager, GetApiManager};
 
 use tracing::{error, info};
 
@@ -66,28 +66,61 @@ pub const PATH_GET_LATEST_SOFTWARE: &str = "/manager_api/latest_software";
     ),
     security(("api_key" = [])),
 )]
-pub async fn get_latest_software<S: GetConfig>(
+pub async fn get_latest_software<S: GetConfig + GetApiManager>(
     Query(software): Query<SoftwareOptionsQueryParam>,
     Query(download): Query<DownloadTypeQueryParam>,
     ConnectInfo(client): ConnectInfo<SocketAddr>,
     state: S,
 ) -> Result<Vec<u8>, StatusCode> {
-    info!(
-        "Get latest software request received. Sending {:?} {:?} to {}",
-        software.software_options,
-        download.download_type,
-        client,
-    );
-    BuildDirCreator::get_data(
-        state.config(),
-        software.software_options,
-        download.download_type
-    )
-        .await
-        .map_err(|e| {
-            error!("{e:?}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })
+    if state.config().software_builder().is_some() {
+        info!(
+            "Get latest software request received. Sending {:?} {:?} to {}",
+            software.software_options,
+            download.download_type,
+            client,
+        );
+        BuildDirCreator::get_data(
+            state.config(),
+            software.software_options,
+            download.download_type
+        )
+            .await
+            .map_err(|e| {
+                error!("{e:?}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })
+    } else if state.config().software_update_provider().is_some() {
+        info!(
+            "Get latest software request received. Forwarding the request to the build server. Sending {:?} {:?} to {}",
+            software.software_options,
+            download.download_type,
+            client,
+        );
+        match download.download_type {
+            data::DownloadType::Info => {
+                state
+                    .api_manager()
+                    .get_latest_build_info_raw(software.software_options)
+                    .await
+                    .map_err(|e| {
+                        error!("{e:?}");
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    })
+            }
+            data::DownloadType::EncryptedBinary => {
+                state
+                    .api_manager()
+                    .get_latest_encrypted_software_binary(software.software_options)
+                    .await
+                    .map_err(|e| {
+                        error!("{e:?}");
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    })
+            }
+        }
+    } else {
+        Err(StatusCode::INTERNAL_SERVER_ERROR)
+    }
 }
 
 
@@ -104,24 +137,41 @@ pub const PATH_POST_REQUEST_BUILD_SOFTWARE: &str = "/manager_api/request_build_s
     ),
     security(("api_key" = [])),
 )]
-pub async fn post_request_build_software<S: GetConfig + GetBuildManager>(
+pub async fn post_request_build_software<S: GetConfig + GetBuildManager + GetApiManager>(
     Query(software): Query<SoftwareOptionsQueryParam>,
     ConnectInfo(client): ConnectInfo<SocketAddr>,
     state: S,
 ) -> Result<(), StatusCode> {
-    info!(
-        "Building request from {} reveived. Building {:?}",
-        client,
-        software.software_options,
-    );
-    state
-        .build_manager()
-        .send_build_request(software.software_options)
-        .await
-        .map_err(|e| {
+    if state.config().software_builder().is_some() {
+        info!(
+            "Building request from {} reveived. Building {:?}",
+            client,
+            software.software_options,
+        );
+        state
+            .build_manager()
+            .send_build_request(software.software_options)
+            .await
+            .map_err(|e| {
+                error!("{e:?}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })
+    } else if state.config().software_update_provider().is_some() {
+        info!(
+            "Building request from {} reveived. Forwarding the request to the build server.",
+            client,
+        );
+        state
+            .api_manager()
+            .request_build_software_from_build_server(software.software_options)
+            .await
+            .map_err(|e| {
             error!("{e:?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })
+    } else {
+        Err(StatusCode::INTERNAL_SERVER_ERROR)
+    }
 }
 
 

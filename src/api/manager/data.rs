@@ -40,7 +40,7 @@ pub struct DownloadTypeQueryParam {
     pub download_type: DownloadType,
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub enum DownloadType {
     /// HTTP GET returns BuildInfo JSON.
     Info,

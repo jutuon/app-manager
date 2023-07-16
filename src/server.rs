@@ -37,7 +37,6 @@ use crate::{
     },
 };
 
-
 /// Drop this when quit starts
 pub type ServerQuitHandle = broadcast::Sender<()>;
 
