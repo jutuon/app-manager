@@ -33,5 +33,5 @@ Don't try to create user named admin. It will not work.
 4. Start app backend in debug mode.
 5. Generate bindings
 ```
-openapi-generator-cli generate -i http://localhost:4000/api-doc/app_api.json -g rust -o api_client --package-name api_client
+openapi-generator-cli generate -i http://localhost:4000/api-doc/app_api.json -g rust -o manager_api_client --package-name manager_api_client
 ```
