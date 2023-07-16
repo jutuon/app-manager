@@ -1,5 +1,5 @@
 [package]
-name = "api_client"
+name = "manager_api_client"
 version = "0.1.0"
 authors = ["OpenAPI Generator team and contributors"]
 description = "App manager API"

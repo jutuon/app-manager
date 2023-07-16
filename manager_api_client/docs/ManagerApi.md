@@ -5,7 +5,7 @@ All URIs are relative to *http://localhost*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**get_encryption_key**](ManagerApi.md#get_encryption_key) | **GET** /manager_api/encryption_key/{server} | Get encryption key for some server
-[**get_latest_software**](ManagerApi.md#get_latest_software) | **GET** /manager_api/latest_software | Download latest software
+[**get_latest_software**](ManagerApi.md#get_latest_software) | **GET** /manager_api/latest_software | Download latest software.
 [**get_software_info**](ManagerApi.md#get_software_info) | **GET** /manager_api/software_info | Get current software info about currently installed backend and manager.
 [**post_request_build_software**](ManagerApi.md#post_request_build_software) | **POST** /manager_api/request_build_software | Request building the latest software from git.
 [**post_request_software_update**](ManagerApi.md#post_request_software_update) | **POST** /manager_api/request_software_update | Request software update.
@@ -45,9 +45,9 @@ Name | Type | Description  | Required | Notes
 ## get_latest_software
 
 > std::path::PathBuf get_latest_software(software_options, download_type)
-Download latest software
+Download latest software.
 
-Download latest software
+Download latest software.  Returns BuildInfo JSON or encrypted binary depending on DownloadTypeQueryParam value.
 
 ### Parameters
 

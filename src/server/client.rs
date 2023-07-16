@@ -1,7 +1,7 @@
 
 use std::{net::SocketAddr, io::BufReader};
 
-use api_client::{apis::{configuration::{Configuration, ApiKey}, manager_api::get_encryption_key}, models::DataEncryptionKey, manual_additions::get_latest_software_fixed};
+use manager_api_client::{apis::{configuration::{Configuration, ApiKey}, manager_api::get_encryption_key}, models::DataEncryptionKey, manual_additions::get_latest_software_fixed};
 use reqwest::Certificate;
 use tracing::info;
 use tracing_subscriber::fmt::format;
@@ -45,7 +45,7 @@ pub struct ApiClient {
 
 impl ApiClient {
     pub fn new(config: &Config) -> Result<Self, ApiError> {
-        let api_key = api_client::apis::configuration::ApiKey {
+        let api_key = manager_api_client::apis::configuration::ApiKey {
             prefix: None,
             key: config.api_key().to_string(),
         };
@@ -138,14 +138,14 @@ impl<'a> ApiManager<'a> {
         options: SoftwareOptions,
     ) -> Result<BuildInfo, ApiError> {
         let converted_options = match options {
-            SoftwareOptions::Manager => api_client::models::SoftwareOptions::Manager,
-            SoftwareOptions::Backend => api_client::models::SoftwareOptions::Backend,
+            SoftwareOptions::Manager => manager_api_client::models::SoftwareOptions::Manager,
+            SoftwareOptions::Backend => manager_api_client::models::SoftwareOptions::Backend,
         };
 
         let info_json = get_latest_software_fixed(
             self.api_client.software_update_provider_config()?,
             converted_options,
-            api_client::models::DownloadType::Info,
+            manager_api_client::models::DownloadType::Info,
         ).await.into_error(ApiError::ApiRequest)?;
 
         let info: BuildInfo = serde_json::from_slice(&info_json)
@@ -159,14 +159,14 @@ impl<'a> ApiManager<'a> {
         options: SoftwareOptions,
     ) -> Result<Vec<u8>, ApiError> {
         let converted_options = match options {
-            SoftwareOptions::Manager => api_client::models::SoftwareOptions::Manager,
-            SoftwareOptions::Backend => api_client::models::SoftwareOptions::Backend,
+            SoftwareOptions::Manager => manager_api_client::models::SoftwareOptions::Manager,
+            SoftwareOptions::Backend => manager_api_client::models::SoftwareOptions::Backend,
         };
 
         let binary = get_latest_software_fixed(
             self.api_client.software_update_provider_config()?,
             converted_options,
-            api_client::models::DownloadType::EncryptedBinary,
+            manager_api_client::models::DownloadType::EncryptedBinary,
         ).await.into_error(ApiError::ApiRequest)?;
 
         Ok(binary)

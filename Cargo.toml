@@ -44,7 +44,7 @@ async-trait = "0.1.66"
 
 time = { version = "0.3.20" }
 
-api_client = { path = "./api_client" }
+manager_api_client = { path = "./manager_api_client" }
 
 [workspace]
-members = ["api_client"]
+members = ["manager_api_client"]

@@ -92,7 +92,7 @@ pub async fn get_encryption_key(configuration: &configuration::Configuration, se
     }
 }
 
-/// Download latest software
+/// Download latest software.  Returns BuildInfo JSON or encrypted binary depending on DownloadTypeQueryParam value.
 pub async fn get_latest_software(configuration: &configuration::Configuration, software_options: SoftwareOptions, download_type: DownloadType) -> Result<std::path::PathBuf, Error<GetLatestSoftwareError>> {
     let local_var_configuration = configuration;
 
