@@ -1,5 +1,6 @@
 pub mod args;
 pub mod file;
+pub mod info;
 
 use std::{
     io::BufReader,

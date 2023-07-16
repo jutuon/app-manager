@@ -46,5 +46,9 @@ time = { version = "0.3.20" }
 
 manager_api_client = { path = "./manager_api_client" }
 
+[build-dependencies]
+vergen = { version = "8.0.0", features = ["cargo", "git", "gitcl", "rustc"] }
+
+
 [workspace]
 members = ["manager_api_client"]

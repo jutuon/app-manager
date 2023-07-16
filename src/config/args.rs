@@ -1,6 +1,6 @@
 use std::{
     convert::{TryFrom, TryInto},
-    path::PathBuf,
+    path::PathBuf, process::exit,
 };
 
 use clap::{arg, command, value_parser, Command, PossibleValue};
@@ -15,11 +15,18 @@ pub struct ArgsConfig {
 pub fn get_config() -> ArgsConfig {
     let matches = command!()
         .arg(
-            arg!(--todo <DIR> "TODO")
+            arg!(--"build-info" "Print build info and quit.")
                 .required(false)
-                .value_parser(value_parser!(PathBuf)),
         )
         .get_matches();
+
+    if matches.is_present("build-info") {
+        println!(
+            "{}",
+            super::info::build_info()
+        );
+        exit(0)
+    }
 
     ArgsConfig {
         database_dir: matches

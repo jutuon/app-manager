@@ -31,7 +31,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
     api::{ApiDoc, GetBuildManager, GetUpdateManager},
-    config::Config,
+    config::{Config, info::{BUILD_INFO_CARGO_PKG_VERSION, BUILD_INFO_GIT_DESCRIBE}},
     server::{
         app::{App}, client::ApiClient, mount::MountManager, build::BuildManager, backend_controller::BackendController,
     },
@@ -57,6 +57,9 @@ impl AppServer {
 
     pub async fn run(self) {
         tracing_subscriber::fmt::init();
+
+        info!("app-manager version: {}-{}", BUILD_INFO_CARGO_PKG_VERSION, BUILD_INFO_GIT_DESCRIBE);
+
         if self.config.debug_mode() {
             warn!("Debug mode is enabled");
         }
