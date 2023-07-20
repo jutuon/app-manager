@@ -8,9 +8,7 @@ use reqwest::Url;
 
 
 // Config given as command line arguments
-pub struct ArgsConfig {
-    pub database_dir: Option<PathBuf>,
-}
+pub struct ArgsConfig;
 
 pub fn get_config() -> ArgsConfig {
     let matches = command!()
@@ -28,9 +26,5 @@ pub fn get_config() -> ArgsConfig {
         exit(0)
     }
 
-    ArgsConfig {
-        database_dir: matches
-            .get_one::<PathBuf>("todo")
-            .map(ToOwned::to_owned),
-    }
+    ArgsConfig
 }

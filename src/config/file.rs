@@ -56,6 +56,12 @@ scripts_dir = "/app-server-tools/manager-tools"
 # [reboot_if_needed]
 # time = "12:00"
 
+# [system_info]
+# log_services = ["app-manager", "app-backend"]
+# [[system_info.remote_managers]]
+# name = "test-server"
+# manager_base_url = "http://127.0.0.1:5000"
+
 # [tls]
 # public_api_cert = "server_config/public_api.cert"
 # public_api_key = "server_config/public_api.key"
@@ -84,6 +90,7 @@ pub struct ConfigFile {
     pub reboot_if_needed: Option<RebootIfNeededConfig>,
     pub software_update_provider: Option<SoftwareUpdateProviderConfig>,
     pub software_builder: Option<SoftwareBuilderConfig>,
+    pub system_info: Option<SystemInfoConfig>,
     pub socket: SocketConfig,
     pub environment: EnvironmentConfig,
     /// TLS is required if debug setting is false.
@@ -219,4 +226,16 @@ impl TryFrom<String> for TimeValue {
 pub struct EnvironmentConfig {
     pub secure_storage_dir: PathBuf,
     pub scripts_dir: PathBuf,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SystemInfoConfig {
+    pub log_services: Vec<String>,
+    pub remote_managers: Option<Vec<ManagerInstance>>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ManagerInstance {
+    pub name: String,
+    pub manager_base_url: Url,
 }

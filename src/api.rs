@@ -30,6 +30,8 @@ pub const PATH_PREFIX: &str = "/api/v1/";
         manager::get_latest_software,
         manager::post_request_build_software,
         manager::post_request_software_update,
+        manager::get_system_info,
+        manager::get_system_info_all,
     ),
     components(schemas(
         manager::data::DataEncryptionKey,
@@ -41,6 +43,9 @@ pub const PATH_PREFIX: &str = "/api/v1/";
         manager::data::RebootQueryParam,
         manager::data::SoftwareInfo,
         manager::data::BuildInfo,
+        manager::data::SystemInfoList,
+        manager::data::SystemInfo,
+        manager::data::CommandOutput,
     )),
     modifiers(&SecurityApiTokenDefault),
     info(

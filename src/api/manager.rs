@@ -7,9 +7,9 @@ use axum::{Json, TypedHeader, extract::{Path, ConnectInfo, Query}, Extension};
 use futures::FutureExt;
 use hyper::StatusCode;
 
-use crate::server::{build::BuildDirCreator, update::UpdateDirCreator};
+use crate::server::{build::BuildDirCreator, update::UpdateDirCreator, info::SystemInfoGetter};
 
-use self::data::{DataEncryptionKey, ServerNameText, DownloadTypeQueryParam, SoftwareOptionsQueryParam, RebootQueryParam, SoftwareInfo};
+use self::data::{DataEncryptionKey, ServerNameText, DownloadTypeQueryParam, SoftwareOptionsQueryParam, RebootQueryParam, SoftwareInfo, SystemInfo, SystemInfoList};
 
 use super::{GetConfig, GetBuildManager, GetUpdateManager, GetApiManager};
 
@@ -244,6 +244,69 @@ pub async fn get_software_info<S: GetConfig>(
     );
 
     let info = UpdateDirCreator::current_software(state.config()).await.map_err(|e| {
+        error!("{e:?}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(info.into())
+}
+
+pub const PATH_GET_SYSTEM_INFO: &str = "/manager_api/system_info";
+
+/// Get system info about current operating system, hardware and software.
+///
+/// Returns system info related to current manager instance.
+#[utoipa::path(
+    get,
+    path = "/manager_api/system_info",
+    responses(
+        (status = 200, description = "System info", body = SystemInfo),
+        (status = 500, description = "Internal server error."),
+    ),
+    security(("api_key" = [])),
+)]
+pub async fn get_system_info<S: GetConfig>(
+    ConnectInfo(client): ConnectInfo<SocketAddr>,
+    state: S,
+) -> Result<Json<SystemInfo>, StatusCode> {
+    info!(
+        "Get current system info received from {}.",
+        client,
+    );
+
+    let info = SystemInfoGetter::system_info(state.config()).await.map_err(|e| {
+        error!("{e:?}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(info.into())
+}
+
+pub const PATH_GET_SYSTEM_INFO_ALL: &str = "/manager_api/system_info_all";
+
+/// Get system info about current operating system, hardware and software.
+///
+/// Returns system info related to current manager instance and ones
+/// defined in config file.
+#[utoipa::path(
+    get,
+    path = "/manager_api/system_info_all",
+    responses(
+        (status = 200, description = "Get all system infos available", body = SystemInfoList),
+        (status = 500, description = "Internal server error."),
+    ),
+    security(("api_key" = [])),
+)]
+pub async fn get_system_info_all<S: GetConfig + GetApiManager>(
+    ConnectInfo(client): ConnectInfo<SocketAddr>,
+    state: S,
+) -> Result<Json<SystemInfoList>, StatusCode> {
+    info!(
+        "Get all system infos received from {}.",
+        client,
+    );
+
+    let info = SystemInfoGetter::system_info_all(state.config(), &state.api_manager()).await.map_err(|e| {
         error!("{e:?}");
         StatusCode::INTERNAL_SERVER_ERROR
     })?;

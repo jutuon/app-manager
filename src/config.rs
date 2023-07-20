@@ -20,7 +20,7 @@ use crate::{utils::IntoReportExt};
 use self::{
     file::{
         ConfigFile,
-        SocketConfig, ServerEncryptionKey, EncryptionKeyProviderConfig, SoftwareUpdateProviderConfig, SoftwareBuilderConfig, RebootIfNeededConfig,
+        SocketConfig, ServerEncryptionKey, EncryptionKeyProviderConfig, SoftwareUpdateProviderConfig, SoftwareBuilderConfig, RebootIfNeededConfig, SystemInfoConfig,
     },
 };
 
@@ -107,6 +107,10 @@ impl Config {
 
     pub fn script_locations(&self) -> &ScriptLocations {
         &self.script_locations
+    }
+
+    pub fn system_info(&self) -> Option<&SystemInfoConfig> {
+        self.file.system_info.as_ref()
     }
 
     pub fn secure_storage_dir(&self) -> &Path {

@@ -28,6 +28,8 @@ Class | Method | HTTP request | Description
 *ManagerApi* | [**get_encryption_key**](docs/ManagerApi.md#get_encryption_key) | **GET** /manager_api/encryption_key/{server} | Get encryption key for some server
 *ManagerApi* | [**get_latest_software**](docs/ManagerApi.md#get_latest_software) | **GET** /manager_api/latest_software | Download latest software.
 *ManagerApi* | [**get_software_info**](docs/ManagerApi.md#get_software_info) | **GET** /manager_api/software_info | Get current software info about currently installed backend and manager.
+*ManagerApi* | [**get_system_info**](docs/ManagerApi.md#get_system_info) | **GET** /manager_api/system_info | Get system info about current operating system, hardware and software.
+*ManagerApi* | [**get_system_info_all**](docs/ManagerApi.md#get_system_info_all) | **GET** /manager_api/system_info_all | Get system info about current operating system, hardware and software.
 *ManagerApi* | [**post_request_build_software**](docs/ManagerApi.md#post_request_build_software) | **POST** /manager_api/request_build_software | Request building the latest software from git.
 *ManagerApi* | [**post_request_software_update**](docs/ManagerApi.md#post_request_software_update) | **POST** /manager_api/request_software_update | Request software update.
 
@@ -35,6 +37,7 @@ Class | Method | HTTP request | Description
 ## Documentation For Models
 
  - [BuildInfo](docs/BuildInfo.md)
+ - [CommandOutput](docs/CommandOutput.md)
  - [DataEncryptionKey](docs/DataEncryptionKey.md)
  - [DownloadType](docs/DownloadType.md)
  - [DownloadTypeQueryParam](docs/DownloadTypeQueryParam.md)
@@ -43,6 +46,8 @@ Class | Method | HTTP request | Description
  - [SoftwareInfo](docs/SoftwareInfo.md)
  - [SoftwareOptions](docs/SoftwareOptions.md)
  - [SoftwareOptionsQueryParam](docs/SoftwareOptionsQueryParam.md)
+ - [SystemInfo](docs/SystemInfo.md)
+ - [SystemInfoList](docs/SystemInfoList.md)
 
 
 To get access to the crate's generated documentation, use:

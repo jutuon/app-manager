@@ -65,3 +65,20 @@ pub struct BuildInfo {
     pub name: String,
     pub timestamp: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, ToSchema)]
+pub struct SystemInfoList {
+    pub info: Vec<SystemInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, ToSchema)]
+pub struct SystemInfo {
+    pub name: String,
+    pub info: Vec<CommandOutput>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, ToSchema)]
+pub struct CommandOutput {
+    pub name: String,
+    pub output: String,
+}

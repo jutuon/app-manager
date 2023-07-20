@@ -63,6 +63,20 @@ impl PrivateRoutes {
                     move |param1| api::manager::get_software_info(param1, state)
                 }),
             )
+            .route(
+                api::manager::PATH_GET_SYSTEM_INFO,
+                get({
+                    let state = self.state.clone();
+                    move |param1| api::manager::get_system_info(param1, state)
+                }),
+            )
+            .route(
+                api::manager::PATH_GET_SYSTEM_INFO_ALL,
+                get({
+                    let state = self.state.clone();
+                    move |param1| api::manager::get_system_info_all(param1, state)
+                }),
+            )
             .route_layer({
                 middleware::from_fn({
                     let state = self.state.clone();

@@ -4,6 +4,7 @@ pub mod mount;
 pub mod build;
 pub mod reboot;
 pub mod update;
+pub mod info;
 pub mod backend_controller;
 
 use std::{net::SocketAddr, pin::Pin, sync::Arc, time::Duration};
@@ -26,7 +27,7 @@ use tokio_rustls::TlsAcceptor;
 use tower::{MakeService};
 use tower_http::trace::{TraceLayer};
 use tracing::{error, info, log::warn};
-use utoipa::{OpenApi, openapi::info};
+use utoipa::{OpenApi};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
