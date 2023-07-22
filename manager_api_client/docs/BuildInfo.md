@@ -4,6 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**build_info** | **String** | Build info output from the built binary.  Binary must support --build-info command line argument. | 
 **commit_sha** | **String** |  | 
 **name** | **String** |  | 
 **timestamp** | **String** |  | 

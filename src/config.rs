@@ -123,10 +123,11 @@ impl Config {
 }
 
 pub fn get_config() -> Result<Config, GetConfigError> {
+    let args_config = args::get_config();
+
     let current_dir = std::env::current_dir().into_error(GetConfigError::GetWorkingDir)?;
     let mut file_config =
         file::ConfigFile::load(current_dir).change_context(GetConfigError::LoadFileError)?;
-    let args_config = args::get_config();
 
     let public_api_tls_config = match file_config.tls.clone() {
         Some(tls_config) => Some(Arc::new(generate_server_config(

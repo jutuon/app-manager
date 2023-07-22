@@ -7,7 +7,7 @@ use tokio::{task::JoinHandle, sync::mpsc, process::Command};
 use tracing::{info, warn};
 use url::Url;
 
-use crate::{config::{Config, file::SoftwareBuilderConfig}, utils::IntoReportExt, api::manager::data::{DownloadType, SoftwareOptions, BuildInfo}};
+use crate::{config::{Config, file::SoftwareBuilderConfig, info::build_info}, utils::IntoReportExt, api::manager::data::{DownloadType, SoftwareOptions, BuildInfo}};
 
 use super::ServerQuitWatcher;
 
@@ -55,6 +55,8 @@ pub enum BuildError {
     #[error("Build manager is not available")]
     BuildManagerNotAvailable,
 }
+
+pub struct BinaryBuildInfoOutput(String);
 
 #[derive(Debug)]
 pub struct BuildManagerQuitHandle {
@@ -302,9 +304,10 @@ impl BuildManager {
             .await?;
         }
 
-        self.cargo_build(
+        let build_info = self.cargo_build(
             &repository_path,
             repository_name,
+            &binary,
         )
         .await?;
 
@@ -312,6 +315,7 @@ impl BuildManager {
             &repository_path,
             repository_name,
             &binary,
+            build_info,
         )
         .await?;
 
@@ -446,7 +450,8 @@ impl BuildManager {
         &self,
         repository_path: &str,
         repository_name: &str,
-    ) -> Result<(), BuildError> {
+        binary: &str,
+    ) -> Result<BinaryBuildInfoOutput, BuildError> {
         info!("Cargo build {} repository", repository_name);
         let status = Command::new("cargo")
             .arg("build")
@@ -461,7 +466,28 @@ impl BuildManager {
             return Err(BuildError::CommandFailed(status).into());
         }
 
-        Ok(())
+        let binary_path = Path::new(repository_path)
+            .join("target")
+            .join("release")
+            .join(binary);
+
+        info!("Getting build info for {}", binary_path.display());
+        let output = Command::new(binary_path)
+            .arg("--build-info")
+            .current_dir(repository_path)
+            .output()
+            .await
+            .into_error(BuildError::ProcessWaitFailed)?;
+
+        if output.status.success() {
+            let output = std::str::from_utf8(&output.stdout)
+                .into_error(BuildError::InvalidOutput)?;
+
+            Ok(BinaryBuildInfoOutput(output.to_string()))
+        } else {
+            tracing::error!("Getting build info failed");
+            Err(BuildError::CommandFailed(output.status).into())
+        }
     }
 
     pub async fn copy_and_sign_binary(
@@ -469,6 +495,7 @@ impl BuildManager {
         repository_path: &str,
         repository_name: &str,
         binary: &str,
+        bulid_info_output: BinaryBuildInfoOutput,
     ) -> Result<(), BuildError> {
         let binary_path = Path::new(repository_path)
             .join("target")
@@ -543,6 +570,7 @@ impl BuildManager {
             commit_sha: Self::git_get_commit_sha(repository_path, repository_name).await?,
             name: repository_name.to_string(),
             timestamp: current_time.to_string(),
+            build_info: bulid_info_output.0,
         };
         let build_info_file = BuildDirCreator::build_info_json_name(binary);
         let build_info_path = build_dir_for_current.join(&build_info_file);
