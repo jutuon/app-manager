@@ -166,6 +166,7 @@ fn check_script_locations(script_dir: &Path, is_debug: bool) -> Result<ScriptLoc
     let change_encryption_password = script_dir.join("change-encryption-password.sh");
     let start_backend = script_dir.join("start-backend.sh");
     let stop_backend = script_dir.join("stop-backend.sh");
+    let print_logs = script_dir.join("print-logs.sh");
 
     let mut errors = vec![];
 
@@ -187,6 +188,9 @@ fn check_script_locations(script_dir: &Path, is_debug: bool) -> Result<ScriptLoc
     if !stop_backend.exists() {
         errors.push(format!("Script not found: {}", stop_backend.display()));
     }
+    if !print_logs.exists() {
+        errors.push(format!("Script not found: {}", print_logs.display()));
+    }
 
     if errors.is_empty() || is_debug {
         if errors.is_empty() {
@@ -201,6 +205,7 @@ fn check_script_locations(script_dir: &Path, is_debug: bool) -> Result<ScriptLoc
             change_encryption_password,
             start_backend,
             stop_backend,
+            print_logs,
         })
     } else {
         Err(GetConfigError::ScriptLocationError)
@@ -281,6 +286,7 @@ pub struct ScriptLocations {
     pub change_encryption_password: PathBuf,
     pub start_backend: PathBuf,
     pub stop_backend: PathBuf,
+    pub print_logs: PathBuf,
 }
 
 impl ScriptLocations {
@@ -306,5 +312,9 @@ impl ScriptLocations {
 
     pub fn stop_backend(&self) -> &Path {
         &self.stop_backend
+    }
+
+    pub fn print_logs(&self) -> &Path {
+        &self.print_logs
     }
 }

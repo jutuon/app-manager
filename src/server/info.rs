@@ -39,6 +39,9 @@ pub enum SystemInfoError {
     #[error("Invalid input")]
     InvalidInput,
 
+    #[error("Invalid path")]
+    InvalidPath,
+
     #[error("Api request failed")]
     ApiRequest,
 }
@@ -83,6 +86,7 @@ impl SystemInfoGetter {
         let df_inodes = Self::run_df_inodes().await?;
         let uptime = Self::run_uptime().await?;
         let free = Self::run_free().await?;
+        let print_logs = Self::run_print_logs(config).await?;
 
         let whoami = Self::run_whoami().await?;
         let username = whoami.output.trim().to_string();
@@ -94,6 +98,7 @@ impl SystemInfoGetter {
             uptime,
             free,
             top,
+            print_logs,
         ];
 
         if let Some(info_config) = config.system_info() {
@@ -141,6 +146,13 @@ impl SystemInfoGetter {
 
     async fn run_journalctl(service: &str) -> Result<CommandOutput, SystemInfoError> {
         Self::run_cmd_with_args("journalctl", &["--no-pager", "-n", "10", "-u", service]).await
+    }
+
+    /// Run print-logs.sh script which prints some logs requiring sudo.
+    async fn run_print_logs(config: &Config) -> Result<CommandOutput, SystemInfoError> {
+        let script = config.script_locations().print_logs();
+        let script_str = script.to_str().ok_or(SystemInfoError::InvalidInput)?;
+        Self::run_cmd_with_args("sudo", &[script_str]).await
     }
 
     async fn run_cmd_with_args(cmd: &str, args: &[&str]) -> Result<CommandOutput, SystemInfoError> {
