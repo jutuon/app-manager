@@ -455,6 +455,8 @@ impl BuildManager {
         info!("Cargo build {} repository", repository_name);
         let status = Command::new("cargo")
             .arg("build")
+            .arg("--bin")
+            .arg(binary)
             .arg("--release")
             .current_dir(repository_path)
             .status()
