@@ -14,7 +14,7 @@ TODO
 
 sudo apt install build-essential libssl-dev pkg-config
 
-# Local development servers
+## Local development servers
 
 Multipass logs
 less /Library/Logs/Multipass/multipassd.log
@@ -23,6 +23,19 @@ You can get multipass default SSH public key by creating default VM and checking
 .ssh dir.
 
 Don't try to create user named admin. It will not work.
+
+## Add space to secure storage
+
+1. Stop manager
+2. Run
+```
+sudo truncate --size=+1G encrypted-filesystem.data
+```
+3. Start manager
+4. Run
+```
+sudo resize2fs /dev/mapper/app-encrypted-data-mapper
+```
 
 ## Update manager API bindings
 

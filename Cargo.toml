@@ -5,6 +5,14 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "app_manager"
+path = "src/lib.rs"
+
+[[bin]]
+name = "app-manager"
+path = "src/main.rs"
+
 [dependencies]
 clap = { version = "3.2.14", features = ["cargo"] }
 toml = "0.7.2"
