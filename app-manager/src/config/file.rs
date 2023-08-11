@@ -197,7 +197,7 @@ pub struct RebootIfNeededConfig {
     pub time: TimeValue,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(try_from = "String")]
 pub struct TimeValue {
     pub hours: u8,
