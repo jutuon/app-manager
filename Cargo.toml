@@ -1,2 +1,5 @@
 [workspace]
-members = ["app-manager", "manager_api_client"]
+members = [
+    "crates/app-manager",
+    "crates/manager_api_client"
+]
