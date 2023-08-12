@@ -1,5 +1,3 @@
-pub mod data;
-
 use std::{net::SocketAddr, vec};
 
 use axum::{Json, TypedHeader, extract::{Path, ConnectInfo, Query}, Extension};
@@ -9,7 +7,7 @@ use hyper::StatusCode;
 
 use crate::server::{build::BuildDirCreator, update::UpdateDirCreator, info::SystemInfoGetter};
 
-use self::data::{DataEncryptionKey, ServerNameText, DownloadTypeQueryParam, SoftwareOptionsQueryParam, RebootQueryParam, SoftwareInfo, SystemInfo, SystemInfoList};
+use manager_model::{DataEncryptionKey, ServerNameText, DownloadTypeQueryParam, SoftwareOptionsQueryParam, RebootQueryParam, SoftwareInfo, SystemInfo, SystemInfoList, DownloadType, SoftwareOptions};
 
 use super::{GetConfig, GetBuildManager, GetUpdateManager, GetApiManager};
 
@@ -97,7 +95,7 @@ pub async fn get_latest_software<S: GetConfig + GetApiManager>(
             client,
         );
         match download.download_type {
-            data::DownloadType::Info => {
+            DownloadType::Info => {
                 state
                     .api_manager()
                     .get_latest_build_info_raw(software.software_options)
@@ -107,7 +105,7 @@ pub async fn get_latest_software<S: GetConfig + GetApiManager>(
                         StatusCode::INTERNAL_SERVER_ERROR
                     })
             }
-            data::DownloadType::EncryptedBinary => {
+            DownloadType::EncryptedBinary => {
                 state
                     .api_manager()
                     .get_latest_encrypted_software_binary(software.software_options)
@@ -205,13 +203,13 @@ pub async fn post_request_software_update<S: GetConfig + GetUpdateManager>(
     );
 
     match software.software_options {
-        data::SoftwareOptions::Manager => {
+        SoftwareOptions::Manager => {
             state.update_manager().send_update_manager_request(reboot.reboot).await.map_err(|e| {
                 error!("{e:?}");
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
         },
-        data::SoftwareOptions::Backend => {
+        SoftwareOptions::Backend => {
             state.update_manager().send_update_backend_request(reboot.reboot).await.map_err(|e| {
                 error!("{e:?}");
                 StatusCode::INTERNAL_SERVER_ERROR

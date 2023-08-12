@@ -1,9 +1,13 @@
-use app_manager::server::AppServer;
+pub mod api;
+pub mod config;
+pub mod server;
+pub mod utils;
+
 
 fn main() {
-    let config = app_manager::config::get_config().unwrap();
+    let config = self::config::get_config().unwrap();
 
     let runtime = tokio::runtime::Runtime::new().unwrap();
 
-    runtime.block_on(async { AppServer::new(config).run().await })
+    runtime.block_on(async { self::server::AppServer::new(config).run().await })
 }

@@ -36,7 +36,8 @@ dependencies = [
  "headers",
  "http",
  "hyper",
- "manager_api_client",
+ "manager_api",
+ "manager_model",
  "mime",
  "reqwest",
  "rustls-pemfile",
@@ -760,6 +761,43 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "518ef76f2f87365916b142844c16d8fefd85039bc5699050210a7778ee1cd1de"
 
 [[package]]
+name = "manager_api"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "bytes",
+ "clap",
+ "error-stack",
+ "futures",
+ "headers",
+ "http",
+ "hyper",
+ "manager_api_client",
+ "manager_model",
+ "mime",
+ "reqwest",
+ "rustls-pemfile",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "time",
+ "tokio",
+ "tokio-rustls",
+ "tokio-stream",
+ "tokio-util",
+ "toml",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "utoipa",
+ "utoipa-swagger-ui",
+ "uuid",
+]
+
+[[package]]
 name = "manager_api_client"
 version = "0.1.0"
 dependencies = [
@@ -768,6 +806,41 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "url",
+ "uuid",
+]
+
+[[package]]
+name = "manager_model"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "bytes",
+ "clap",
+ "error-stack",
+ "futures",
+ "headers",
+ "http",
+ "hyper",
+ "mime",
+ "reqwest",
+ "rustls-pemfile",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "time",
+ "tokio",
+ "tokio-rustls",
+ "tokio-stream",
+ "tokio-util",
+ "toml",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "utoipa",
+ "utoipa-swagger-ui",
  "uuid",
 ]
 

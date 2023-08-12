@@ -10,7 +10,9 @@ use tracing::{info, warn};
 use url::Url;
 use utoipa::openapi::info;
 
-use crate::{config::{Config, file::SoftwareBuilderConfig}, utils::IntoReportExt, api::manager::data::{DownloadType, SoftwareOptions, BuildInfo}};
+use crate::{config::{Config, file::SoftwareBuilderConfig}, utils::IntoReportExt};
+use manager_model::{DownloadType, SoftwareOptions, BuildInfo};
+
 
 use super::ServerQuitWatcher;
 

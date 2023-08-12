@@ -8,7 +8,9 @@ use tokio::{task::JoinHandle, sync::mpsc, process::Command};
 use tracing::{info, warn};
 use url::Url;
 
-use crate::{config::{Config, file::{SoftwareBuilderConfig, SoftwareUpdateProviderConfig}}, utils::IntoReportExt, api::manager::data::{DownloadType, SoftwareOptions, BuildInfo, SoftwareInfo}};
+use crate::{config::{Config, file::{SoftwareBuilderConfig, SoftwareUpdateProviderConfig}}, utils::IntoReportExt};
+
+use manager_model::{DownloadType, SoftwareOptions, BuildInfo, SoftwareInfo};
 
 use super::{ServerQuitWatcher, client::{ApiClient, ApiManager}, build::BuildDirCreator, reboot::{REBOOT_ON_NEXT_CHECK, RebootManagerHandle}};
 

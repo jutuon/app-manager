@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-use crate::server::build::{MANAGER_REPOSITORY_NAME, BACKEND_REPOSITORY_NAME};
-
+pub const MANAGER_REPOSITORY_NAME: &str = "manager";
+pub const BACKEND_REPOSITORY_NAME: &str = "backend";
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Default, PartialEq, Eq)]
 pub struct DataEncryptionKey {

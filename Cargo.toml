@@ -1,5 +1,7 @@
 [workspace]
 members = [
     "crates/app-manager",
-    "crates/manager_api_client"
+    "crates/manager_api_client",
+    "crates/manager_model",
+    "crates/manager_api",
 ]

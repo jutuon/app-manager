@@ -4,8 +4,8 @@
 
 use std::{sync::Arc, path::Path, process::{Stdio, ExitStatus}};
 
-use manager_api_client::models::DataEncryptionKey;
 use http::StatusCode;
+use manager_model::DataEncryptionKey;
 use tokio::{process::Command, io::{Stdin, AsyncWriteExt}};
 
 use error_stack::{Result, ResultExt, IntoReport};

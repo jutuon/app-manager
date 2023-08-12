@@ -1,13 +1,15 @@
 
 use std::{net::SocketAddr, io::BufReader, collections::{VecDeque, HashMap}};
 
-use manager_api_client::{apis::{configuration::{Configuration, ApiKey}, manager_api::{get_encryption_key, post_request_build_software}}, models::DataEncryptionKey, manual_additions::get_latest_software_fixed};
+use manager_api::{ManagerApi, Configuration, ApiKey};
 use reqwest::Certificate;
 use tracing::info;
 use tracing_subscriber::fmt::format;
 use url::Url;
 
-use crate::{config::{Config, file::SoftwareUpdateProviderConfig}, api::{self, manager::data::{SoftwareInfo, SoftwareOptions, BuildInfo, SystemInfo, CommandOutput},}, utils::IntoReportExt};
+use crate::{config::{Config, file::SoftwareUpdateProviderConfig}, api::{self, }, utils::IntoReportExt};
+
+use manager_model::{SoftwareInfo, SoftwareOptions, BuildInfo, SystemInfo, CommandOutput, DownloadType, DataEncryptionKey};
 
 use error_stack::{Result, ResultExt, IntoReport};
 
@@ -46,7 +48,7 @@ pub struct ApiClient {
 
 impl ApiClient {
     pub fn new(config: &Config) -> Result<Self, ApiError> {
-        let api_key = manager_api_client::apis::configuration::ApiKey {
+        let api_key = ApiKey {
             prefix: None,
             key: config.api_key().to_string(),
         };
@@ -152,27 +154,19 @@ impl<'a> ApiManager<'a> {
         let provider =
             self.config.encryption_key_provider().ok_or(ApiError::MissingConfiguration)?;
 
-        let key = get_encryption_key(
+        ManagerApi::get_encryption_key(
             self.api_client.encryption_key_provider_config()?,
             &provider.key_name,
-        ).await.into_error(ApiError::ApiRequest)?;
-
-        Ok(DataEncryptionKey { key: key.key })
+        ).await.into_error(ApiError::ApiRequest)
     }
 
     pub async fn get_latest_build_info_raw(
         &self,
         options: SoftwareOptions,
     ) -> Result<Vec<u8>, ApiError> {
-        let converted_options = match options {
-            SoftwareOptions::Manager => manager_api_client::models::SoftwareOptions::Manager,
-            SoftwareOptions::Backend => manager_api_client::models::SoftwareOptions::Backend,
-        };
-
-        get_latest_software_fixed(
+        ManagerApi::get_latest_build_info_raw(
             self.api_client.software_update_provider_config()?,
-            converted_options,
-            manager_api_client::models::DownloadType::Info,
+            options,
         ).await.into_error(ApiError::ApiRequest)
     }
 
@@ -180,42 +174,29 @@ impl<'a> ApiManager<'a> {
         &self,
         options: SoftwareOptions,
     ) -> Result<BuildInfo, ApiError> {
-        let info_json = self.get_latest_build_info_raw(options).await?;
-        let info: BuildInfo = serde_json::from_slice(&info_json)
-            .into_error(ApiError::InvalidValue)?;
-        Ok(info)
+        ManagerApi::get_latest_build_info(
+            self.api_client.software_update_provider_config()?,
+            options
+        ).await.into_error(ApiError::InvalidValue)
     }
 
     pub async fn get_latest_encrypted_software_binary(
         &self,
         options: SoftwareOptions,
     ) -> Result<Vec<u8>, ApiError> {
-        let converted_options = match options {
-            SoftwareOptions::Manager => manager_api_client::models::SoftwareOptions::Manager,
-            SoftwareOptions::Backend => manager_api_client::models::SoftwareOptions::Backend,
-        };
-
-        let binary = get_latest_software_fixed(
+        ManagerApi::get_latest_encrypted_software_binary(
             self.api_client.software_update_provider_config()?,
-            converted_options,
-            manager_api_client::models::DownloadType::EncryptedBinary,
-        ).await.into_error(ApiError::ApiRequest)?;
-
-        Ok(binary)
+            options,
+        ).await.into_error(ApiError::ApiRequest)
     }
 
     pub async fn request_build_software_from_build_server(
         &self,
         options: SoftwareOptions,
     ) -> Result<(), ApiError> {
-        let converted_options = match options {
-            SoftwareOptions::Manager => manager_api_client::models::SoftwareOptions::Manager,
-            SoftwareOptions::Backend => manager_api_client::models::SoftwareOptions::Backend,
-        };
-
-        post_request_build_software(
+        ManagerApi::request_build_software_from_build_server(
             self.api_client.software_update_provider_config()?,
-            converted_options,
+            options,
         ).await.into_error(ApiError::ApiRequest)
     }
 
@@ -223,23 +204,8 @@ impl<'a> ApiManager<'a> {
         &self,
         remote_manager_name: &str,
     ) -> Result<SystemInfo, ApiError> {
-        let system_info = manager_api_client::apis::manager_api::get_system_info(
+        ManagerApi::system_info(
             self.api_client.system_info_remote_manager_config(remote_manager_name)?,
-        ).await.into_error(ApiError::ApiRequest)?;
-
-        let info_vec = system_info.info
-            .into_iter()
-            .map(|info| {
-                CommandOutput {
-                    name: info.name,
-                    output: info.output,
-                }
-            })
-            .collect::<Vec<CommandOutput>>();
-
-        Ok(SystemInfo {
-            name: system_info.name,
-            info: info_vec,
-        })
+        ).await.into_error(ApiError::ApiRequest)
     }
 }

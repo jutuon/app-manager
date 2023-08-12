@@ -1,11 +1,12 @@
 [package]
-name = "app-manager"
+name = "manager_model"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
 clap = { version = "3.2.14", features = ["cargo"] }
 toml = "0.7.2"
 uuid = { version = "1.1.2", features = ["v4", "serde"] }
@@ -43,9 +44,3 @@ error-stack = "0.2.3"
 async-trait = "0.1.66"
 
 time = { version = "0.3.20" }
-
-manager_api = { path = "../manager_api" }
-manager_model = { path = "../manager_model" }
-
-[build-dependencies]
-vergen = { version = "8.0.0", features = ["cargo", "git", "gitcl", "rustc"] }

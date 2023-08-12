@@ -7,14 +7,14 @@ use tokio::{task::JoinHandle, sync::mpsc, process::Command};
 use tracing::{info, warn};
 use url::Url;
 
-use crate::{config::{Config, file::SoftwareBuilderConfig, info::build_info}, utils::IntoReportExt, api::manager::data::{DownloadType, SoftwareOptions, BuildInfo}};
+use crate::{config::{Config, file::SoftwareBuilderConfig, info::build_info}, utils::IntoReportExt};
+
+use manager_model::{DownloadType, SoftwareOptions, BuildInfo, MANAGER_REPOSITORY_NAME, BACKEND_REPOSITORY_NAME};
 
 use super::ServerQuitWatcher;
 
 use error_stack::Result;
 
-pub const MANAGER_REPOSITORY_NAME: &str = "manager";
-pub const BACKEND_REPOSITORY_NAME: &str = "backend";
 pub const GPG_KEY_NAME: &str = "app-manager-software-builder";
 
 #[derive(thiserror::Error, Debug)]

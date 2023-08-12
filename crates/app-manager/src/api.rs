@@ -3,7 +3,6 @@
 // Routes
 pub mod manager;
 
-pub mod model;
 pub mod utils;
 
 use utoipa::{Modify, OpenApi};
@@ -15,6 +14,8 @@ use crate::{
 };
 
 use utils::SecurityApiTokenDefault;
+
+use manager_model as model;
 
 // Paths
 
@@ -34,18 +35,18 @@ pub const PATH_PREFIX: &str = "/api/v1/";
         manager::get_system_info_all,
     ),
     components(schemas(
-        manager::data::DataEncryptionKey,
-        manager::data::ServerNameText,
-        manager::data::SoftwareOptions,
-        manager::data::SoftwareOptionsQueryParam,
-        manager::data::DownloadType,
-        manager::data::DownloadTypeQueryParam,
-        manager::data::RebootQueryParam,
-        manager::data::SoftwareInfo,
-        manager::data::BuildInfo,
-        manager::data::SystemInfoList,
-        manager::data::SystemInfo,
-        manager::data::CommandOutput,
+        model::DataEncryptionKey,
+        model::ServerNameText,
+        model::SoftwareOptions,
+        model::SoftwareOptionsQueryParam,
+        model::DownloadType,
+        model::DownloadTypeQueryParam,
+        model::RebootQueryParam,
+        model::SoftwareInfo,
+        model::BuildInfo,
+        model::SystemInfoList,
+        model::SystemInfo,
+        model::CommandOutput,
     )),
     modifiers(&SecurityApiTokenDefault),
     info(
