@@ -7,15 +7,15 @@ use std::{
     sync::Arc,
 };
 
-use manager_model::DataEncryptionKey;
-use tokio::{io::AsyncWriteExt, process::Command};
-
 use error_stack::{IntoReport, Result, ResultExt};
+use tokio::{io::AsyncWriteExt, process::Command};
 use tracing::info;
+
+use manager_model::DataEncryptionKey;
 
 use crate::{
     api::GetApiManager,
-    config::{file::EncryptionKeyProviderConfig, Config},
+    config::{Config, file::EncryptionKeyProviderConfig},
     utils::IntoReportExt,
 };
 

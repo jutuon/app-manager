@@ -4,12 +4,13 @@ use std::{
     path::Path,
     process::ExitStatus,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     time::Duration,
 };
 
+use error_stack::Result;
 use time::{OffsetDateTime, Time, UtcOffset};
 use tokio::{process::Command, sync::mpsc, task::JoinHandle, time::sleep};
 use tracing::{info, warn};
@@ -17,8 +18,6 @@ use tracing::{info, warn};
 use crate::{config::Config, utils::IntoReportExt};
 
 use super::ServerQuitWatcher;
-
-use error_stack::Result;
 
 /// If this file exists reboot system at some point. Works at least on Ubuntu.
 const REBOOT_REQUIRED_PATH: &str = "/var/run/reboot-required";
@@ -55,7 +54,8 @@ pub enum RebootError {
 #[derive(Debug)]
 pub struct RebootManagerQuitHandle {
     task: JoinHandle<()>,
-    sender: mpsc::Sender<RebootManagerMessage>,
+    // Make sure Receiver works until the manager quits.
+    _sender: mpsc::Sender<RebootManagerMessage>,
 }
 
 impl RebootManagerQuitHandle {
@@ -111,7 +111,7 @@ impl RebootManager {
 
         let quit_handle = RebootManagerQuitHandle {
             task,
-            sender: handle.sender.clone(),
+            _sender: handle.sender.clone(),
         };
 
         (quit_handle, handle)

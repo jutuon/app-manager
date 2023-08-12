@@ -5,3 +5,5 @@ cloud-init
 manager_config.toml
 
 .DS_store
+.idea
+.vscode

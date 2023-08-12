@@ -3,27 +3,26 @@
 use std::{
     path::{Path, PathBuf},
     process::ExitStatus,
-    sync::{atomic::Ordering, Arc},
+    sync::{Arc, atomic::Ordering},
 };
 
+use error_stack::{Result, ResultExt};
 use tokio::{process::Command, sync::mpsc, task::JoinHandle};
 use tracing::{info, warn};
 
+use manager_model::{BuildInfo, SoftwareInfo, SoftwareOptions};
+
 use crate::{
-    config::{file::SoftwareUpdateProviderConfig, Config},
+    config::{Config, file::SoftwareUpdateProviderConfig},
     utils::IntoReportExt,
 };
-
-use manager_model::{BuildInfo, SoftwareInfo, SoftwareOptions};
 
 use super::{
     build::BuildDirCreator,
     client::{ApiClient, ApiManager},
-    reboot::{RebootManagerHandle, REBOOT_ON_NEXT_CHECK},
+    reboot::{REBOOT_ON_NEXT_CHECK, RebootManagerHandle},
     ServerQuitWatcher,
 };
-
-use error_stack::{Result, ResultExt};
 
 #[derive(thiserror::Error, Debug)]
 pub enum UpdateError {
@@ -82,7 +81,8 @@ pub enum UpdateError {
 #[derive(Debug)]
 pub struct UpdateManagerQuitHandle {
     task: JoinHandle<()>,
-    sender: mpsc::Sender<UpdateManagerMessage>,
+    // Make sure Receiver works until the manager quits.
+    _sender: mpsc::Sender<UpdateManagerMessage>,
 }
 
 impl UpdateManagerQuitHandle {
@@ -163,7 +163,7 @@ impl UpdateManager {
 
         let quit_handle = UpdateManagerQuitHandle {
             task,
-            sender: handle.sender.clone(),
+            _sender: handle.sender.clone(),
         };
 
         (quit_handle, handle)

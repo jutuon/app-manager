@@ -2,15 +2,14 @@
 
 use std::process::ExitStatus;
 
-use manager_model::{CommandOutput, SystemInfo, SystemInfoList};
-
+use error_stack::Result;
 use tokio::process::Command;
+
+use manager_model::{CommandOutput, SystemInfo, SystemInfoList};
 
 use crate::{config::Config, utils::IntoReportExt};
 
 use super::client::ApiManager;
-
-use error_stack::Result;
 
 #[derive(thiserror::Error, Debug)]
 pub enum SystemInfoError {

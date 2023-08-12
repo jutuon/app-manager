@@ -1,7 +1,3 @@
-pub mod args;
-pub mod file;
-pub mod info;
-
 use std::{
     io::BufReader,
     path::{Path, PathBuf},
@@ -10,7 +6,6 @@ use std::{
 };
 
 use error_stack::{IntoReport, Result, ResultExt};
-
 use rustls_pemfile::{certs, rsa_private_keys};
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tracing::{info, log::warn};
@@ -21,6 +16,10 @@ use self::file::{
     ConfigFile, EncryptionKeyProviderConfig, RebootIfNeededConfig, ServerEncryptionKey,
     SocketConfig, SoftwareBuilderConfig, SoftwareUpdateProviderConfig, SystemInfoConfig,
 };
+
+pub mod args;
+pub mod file;
+pub mod info;
 
 #[derive(thiserror::Error, Debug)]
 pub enum GetConfigError {

@@ -1,12 +1,3 @@
-pub mod app;
-pub mod backend_controller;
-pub mod build;
-pub mod client;
-pub mod info;
-pub mod mount;
-pub mod reboot;
-pub mod update;
-
 use std::{net::SocketAddr, pin::Pin, sync::Arc, time::Duration};
 
 use axum::Router;
@@ -15,7 +6,6 @@ use hyper::server::{
     accept::Accept,
     conn::{AddrIncoming, Http},
 };
-
 use tokio::{
     net::TcpListener,
     signal::{
@@ -36,14 +26,23 @@ use utoipa_swagger_ui::SwaggerUi;
 use crate::{
     api::{ApiDoc, GetBuildManager, GetUpdateManager},
     config::{
-        info::{BUILD_INFO_CARGO_PKG_VERSION, BUILD_INFO_GIT_DESCRIBE},
         Config,
+        info::{BUILD_INFO_CARGO_PKG_VERSION, BUILD_INFO_GIT_DESCRIBE},
     },
     server::{
         app::App, backend_controller::BackendController, build::BuildManager, client::ApiClient,
         mount::MountManager,
     },
 };
+
+pub mod app;
+pub mod backend_controller;
+pub mod build;
+pub mod client;
+pub mod info;
+pub mod mount;
+pub mod reboot;
+pub mod update;
 
 /// Drop this when quit starts
 pub type ServerQuitHandle = broadcast::Sender<()>;

@@ -2,11 +2,10 @@
 
 use std::process::ExitStatus;
 
+use error_stack::Result;
 use tokio::process::Command;
 
 use crate::{config::Config, utils::IntoReportExt};
-
-use error_stack::Result;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ControllerError {

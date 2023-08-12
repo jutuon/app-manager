@@ -6,10 +6,9 @@ use std::{
 use axum::{extract::ConnectInfo, middleware::Next, response::Response};
 use headers::{Header, HeaderValue};
 use hyper::{header, Request, StatusCode};
-
 use utoipa::{
-    openapi::security::{ApiKeyValue, SecurityScheme},
     Modify,
+    openapi::security::{ApiKeyValue, SecurityScheme},
 };
 
 use super::GetConfig;

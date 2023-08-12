@@ -5,9 +5,10 @@ use std::{
 };
 
 use error_stack::{Report, Result, ResultExt};
-use manager_model::DataEncryptionKey;
 use serde::{Deserialize, Serialize};
 use url::Url;
+
+use manager_model::DataEncryptionKey;
 
 use crate::utils::IntoReportExt;
 

@@ -6,21 +6,20 @@ use std::{
     sync::Arc,
 };
 
+use error_stack::Result;
 use tokio::{process::Command, sync::mpsc, task::JoinHandle};
 use tracing::{info, warn};
 
+use manager_model::{
+    BACKEND_REPOSITORY_NAME, BuildInfo, DownloadType, MANAGER_REPOSITORY_NAME, SoftwareOptions,
+};
+
 use crate::{
-    config::{file::SoftwareBuilderConfig, Config},
+    config::{Config, file::SoftwareBuilderConfig},
     utils::IntoReportExt,
 };
 
-use manager_model::{
-    BuildInfo, DownloadType, SoftwareOptions, BACKEND_REPOSITORY_NAME, MANAGER_REPOSITORY_NAME,
-};
-
 use super::ServerQuitWatcher;
-
-use error_stack::Result;
 
 pub const GPG_KEY_NAME: &str = "app-manager-software-builder";
 
@@ -68,7 +67,8 @@ pub struct BinaryBuildInfoOutput(String);
 #[derive(Debug)]
 pub struct BuildManagerQuitHandle {
     task: JoinHandle<()>,
-    sender: mpsc::Sender<BuildManagerMessage>,
+    // Make sure that Receiver works until the end of the task.
+    _sender: mpsc::Sender<BuildManagerMessage>,
 }
 
 impl BuildManagerQuitHandle {
@@ -141,7 +141,7 @@ impl BuildManager {
 
         let quit_handle = BuildManagerQuitHandle {
             task,
-            sender: handle.sender.clone(),
+            _sender: handle.sender.clone(),
         };
 
         (quit_handle, handle)

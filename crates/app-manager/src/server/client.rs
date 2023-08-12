@@ -1,14 +1,12 @@
 use std::collections::HashMap;
 
-use manager_api::{ApiKey, Configuration, ManagerApi};
-
+use error_stack::Result;
 use tracing::info;
 
-use crate::{config::Config, utils::IntoReportExt};
-
+use manager_api::{ApiKey, Configuration, ManagerApi};
 use manager_model::{BuildInfo, DataEncryptionKey, SoftwareOptions, SystemInfo};
 
-use error_stack::Result;
+use crate::{config::Config, utils::IntoReportExt};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ApiError {
