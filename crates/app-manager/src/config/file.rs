@@ -9,7 +9,7 @@ use manager_model::DataEncryptionKey;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{utils::IntoReportExt};
+use crate::utils::IntoReportExt;
 
 use super::GetConfigError;
 
@@ -211,13 +211,15 @@ impl TryFrom<String> for TimeValue {
         let values: Vec<&str> = iter.collect();
         match values[..] {
             [hours, minutes] => {
-                let hours: u8 = hours.parse().map_err(|e: std::num::ParseIntError| e.to_string())?;
-                let minutes: u8 = minutes.parse().map_err(|e: std::num::ParseIntError| e.to_string())?;
-                Ok(TimeValue {hours, minutes})
+                let hours: u8 = hours
+                    .parse()
+                    .map_err(|e: std::num::ParseIntError| e.to_string())?;
+                let minutes: u8 = minutes
+                    .parse()
+                    .map_err(|e: std::num::ParseIntError| e.to_string())?;
+                Ok(TimeValue { hours, minutes })
             }
-            _ => {
-                Err(format!("Unknown values: {:?}", values))
-            }
+            _ => Err(format!("Unknown values: {:?}", values)),
         }
     }
 }

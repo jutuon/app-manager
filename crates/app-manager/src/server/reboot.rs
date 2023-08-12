@@ -1,18 +1,20 @@
-
 //! Handle automatic reboots
 
-use std::{process::ExitStatus, sync::{Arc, atomic::{AtomicBool, Ordering}}, path::{Path}, time::Duration};
+use std::{
+    path::Path,
+    process::ExitStatus,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
 
-
-use time::{OffsetDateTime, UtcOffset, Time};
-use tokio::{task::JoinHandle, sync::mpsc, process::Command, time::sleep};
+use time::{OffsetDateTime, Time, UtcOffset};
+use tokio::{process::Command, sync::mpsc, task::JoinHandle, time::sleep};
 use tracing::{info, warn};
 
-
-
-use crate::{config::{Config}, utils::IntoReportExt};
-
-
+use crate::{config::Config, utils::IntoReportExt};
 
 use super::ServerQuitWatcher;
 
@@ -79,7 +81,8 @@ pub struct RebootManagerHandle {
 
 impl RebootManagerHandle {
     pub async fn reboot_now(&self) -> Result<(), RebootError> {
-        self.sender.send(RebootManagerMessage::RebootNow)
+        self.sender
+            .send(RebootManagerMessage::RebootNow)
             .await
             .into_error(RebootError::RebootManagerNotAvailable)?;
 
@@ -100,16 +103,11 @@ impl RebootManager {
     ) -> (RebootManagerQuitHandle, RebootManagerHandle) {
         let (sender, receiver) = mpsc::channel(1);
 
-        let manager = Self {
-            config,
-            receiver,
-        };
+        let manager = Self { config, receiver };
 
         let task = tokio::spawn(manager.run(quit_notification));
 
-        let handle = RebootManagerHandle {
-            sender,
-        };
+        let handle = RebootManagerHandle { sender };
 
         let quit_handle = RebootManagerQuitHandle {
             task,
@@ -119,11 +117,11 @@ impl RebootManager {
         (quit_handle, handle)
     }
 
-    pub async fn run(
-        mut self,
-        mut quit_notification: ServerQuitWatcher,
-    ) {
-        info!("Automatic reboot status: {:?}", self.config.reboot_if_needed().is_some());
+    pub async fn run(mut self, mut quit_notification: ServerQuitWatcher) {
+        info!(
+            "Automatic reboot status: {:?}",
+            self.config.reboot_if_needed().is_some()
+        );
 
         let mut check_cooldown = false;
 
@@ -164,27 +162,20 @@ impl RebootManager {
         }
     }
 
-    pub async fn handle_message(
-        &self,
-        message: RebootManagerMessage,
-    ) {
+    pub async fn handle_message(&self, message: RebootManagerMessage) {
         match message {
-            RebootManagerMessage::RebootNow => {
-                match self.run_reboot().await {
-                    Ok(()) => {
-                        info!("Reboot successful");
-                    }
-                    Err(e) => {
-                        warn!("Reboot failed. Error: {:?}", e);
-                    }
+            RebootManagerMessage::RebootNow => match self.run_reboot().await {
+                Ok(()) => {
+                    info!("Reboot successful");
                 }
-            }
+                Err(e) => {
+                    warn!("Reboot failed. Error: {:?}", e);
+                }
+            },
         }
     }
 
-    pub async fn reboot_if_needed(
-        &self,
-    ) -> bool {
+    pub async fn reboot_if_needed(&self) -> bool {
         if Path::new(REBOOT_REQUIRED_PATH).exists() {
             info!("Reboot required file exists. Rebooting system");
             self.run_reboot_and_log_error().await;
@@ -210,9 +201,7 @@ impl RebootManager {
         }
     }
 
-    pub async fn run_reboot(
-        &self,
-    ) -> Result<(), RebootError> {
+    pub async fn run_reboot(&self) -> Result<(), RebootError> {
         info!("Rebooting system");
         let status = Command::new("sudo")
             .arg("reboot")
@@ -240,19 +229,13 @@ impl RebootManager {
             return Err(RebootError::ConfigError.into());
         };
 
-        let target_date_time = now
-            .replace_time(
-                target_time
-            );
+        let target_date_time = now.replace_time(target_time);
 
         let duration = if target_date_time > now {
             target_date_time - now
         } else {
             let tomorrow = now + Duration::from_secs(24 * 60 * 60);
-            let tomorrow_target_date_time = tomorrow
-                .replace_time(
-                    target_time
-                );
+            let tomorrow_target_date_time = tomorrow.replace_time(target_time);
             tomorrow_target_date_time - now
         };
 
@@ -265,10 +248,8 @@ impl RebootManager {
     pub async fn get_local_time() -> Result<OffsetDateTime, RebootError> {
         let now: OffsetDateTime = OffsetDateTime::now_utc();
         let offset = Self::get_utc_offset_hours().await?;
-        let now = now.to_offset(
-            UtcOffset::from_hms(offset, 0, 0)
-                .into_error(RebootError::TimeError)?
-        );
+        let now =
+            now.to_offset(UtcOffset::from_hms(offset, 0, 0).into_error(RebootError::TimeError)?);
         Ok(now)
     }
 
@@ -284,8 +265,7 @@ impl RebootManager {
             return Err(RebootError::CommandFailed(output.status).into());
         }
 
-        let offset = std::str::from_utf8(&output.stdout)
-            .into_error(RebootError::InvalidOutput)?;
+        let offset = std::str::from_utf8(&output.stdout).into_error(RebootError::InvalidOutput)?;
 
         let multiplier = match offset.chars().nth(0) {
             Some('-') => -1,

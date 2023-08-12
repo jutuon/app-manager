@@ -1,22 +1,25 @@
 #![deny(unsafe_code)]
 #![warn(unused_crate_dependencies)]
 
-
 //! This crate provides a wrapper for the internal API of the server.
 //! Prevents exposing api_client crate model types to server code.
 
+use manager_api_client::{
+    apis::manager_api::{
+        get_encryption_key, post_request_build_software, post_request_software_update,
+        GetLatestSoftwareError,
+    },
+    manual_additions::get_latest_software_fixed,
+};
+use manager_model::{BuildInfo, CommandOutput, DataEncryptionKey, SoftwareOptions, SystemInfo};
 
-use manager_api_client::{apis::{manager_api::{get_encryption_key, post_request_build_software, GetLatestSoftwareError, post_request_software_update}}, manual_additions::get_latest_software_fixed};
-use manager_model::{SoftwareOptions, BuildInfo, SystemInfo, CommandOutput, DataEncryptionKey};
-
-pub use manager_api_client::apis::{Error, configuration::{ApiKey, Configuration}};
 pub use manager_api_client::apis::manager_api::{
-    GetEncryptionKeyError,
-    GetSystemInfoAllError,
-    GetSystemInfoError,
-    GetSoftwareInfoError,
-    PostRequestBuildSoftwareError,
-    PostRequestSoftwareUpdateError,
+    GetEncryptionKeyError, GetSoftwareInfoError, GetSystemInfoAllError, GetSystemInfoError,
+    PostRequestBuildSoftwareError, PostRequestSoftwareUpdateError,
+};
+pub use manager_api_client::apis::{
+    configuration::{ApiKey, Configuration},
+    Error,
 };
 
 pub struct ManagerApi;
@@ -26,10 +29,7 @@ impl ManagerApi {
         configuration: &Configuration,
         server: &str,
     ) -> Result<DataEncryptionKey, Error<GetEncryptionKeyError>> {
-        let key = get_encryption_key(
-            configuration,
-            server,
-        ).await?;
+        let key = get_encryption_key(configuration, server).await?;
 
         Ok(DataEncryptionKey { key: key.key })
     }
@@ -47,7 +47,8 @@ impl ManagerApi {
             configuration,
             converted_options,
             manager_api_client::models::DownloadType::Info,
-        ).await
+        )
+        .await
     }
 
     pub async fn get_latest_build_info(
@@ -55,8 +56,7 @@ impl ManagerApi {
         options: SoftwareOptions,
     ) -> Result<BuildInfo, Error<GetLatestSoftwareError>> {
         let info_json = Self::get_latest_build_info_raw(configuration, options).await?;
-        let info: BuildInfo = serde_json::from_slice(&info_json)
-            .map_err(Error::Serde)?;
+        let info: BuildInfo = serde_json::from_slice(&info_json).map_err(Error::Serde)?;
         Ok(info)
     }
 
@@ -73,7 +73,8 @@ impl ManagerApi {
             configuration,
             converted_options,
             manager_api_client::models::DownloadType::EncryptedBinary,
-        ).await?;
+        )
+        .await?;
 
         Ok(binary)
     }
@@ -87,26 +88,21 @@ impl ManagerApi {
             SoftwareOptions::Backend => manager_api_client::models::SoftwareOptions::Backend,
         };
 
-        post_request_build_software(
-            configuration,
-            converted_options,
-        ).await
+        post_request_build_software(configuration, converted_options).await
     }
 
     pub async fn system_info(
         configuration: &Configuration,
     ) -> Result<SystemInfo, Error<GetSystemInfoError>> {
-        let system_info = manager_api_client::apis::manager_api::get_system_info(
-            configuration,
-        ).await?;
+        let system_info =
+            manager_api_client::apis::manager_api::get_system_info(configuration).await?;
 
-        let info_vec = system_info.info
+        let info_vec = system_info
+            .info
             .into_iter()
-            .map(|info| {
-                CommandOutput {
-                    name: info.name,
-                    output: info.output,
-                }
+            .map(|info| CommandOutput {
+                name: info.name,
+                output: info.output,
             })
             .collect::<Vec<CommandOutput>>();
 
@@ -126,7 +122,6 @@ impl ManagerApi {
             SoftwareOptions::Backend => manager_api_client::models::SoftwareOptions::Backend,
         };
 
-        post_request_software_update(configuration, converted_options, reboot)
-            .await
+        post_request_software_update(configuration, converted_options, reboot).await
     }
 }

@@ -15,13 +15,11 @@ use rustls_pemfile::{certs, rsa_private_keys};
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tracing::{info, log::warn};
 
-use crate::{utils::IntoReportExt};
+use crate::utils::IntoReportExt;
 
-use self::{
-    file::{
-        ConfigFile,
-        SocketConfig, ServerEncryptionKey, EncryptionKeyProviderConfig, SoftwareUpdateProviderConfig, SoftwareBuilderConfig, RebootIfNeededConfig, SystemInfoConfig,
-    },
+use self::file::{
+    ConfigFile, EncryptionKeyProviderConfig, RebootIfNeededConfig, ServerEncryptionKey,
+    SocketConfig, SoftwareBuilderConfig, SoftwareUpdateProviderConfig, SystemInfoConfig,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -72,25 +70,23 @@ impl Config {
     }
 
     pub fn encryption_keys(&self) -> &[ServerEncryptionKey] {
-        self.file.server_encryption_keys
+        self.file
+            .server_encryption_keys
             .as_ref()
             .map(|d| d.as_slice())
             .unwrap_or(&[])
     }
 
     pub fn encryption_key_provider(&self) -> Option<&EncryptionKeyProviderConfig> {
-        self.file.encryption_key_provider
-            .as_ref()
+        self.file.encryption_key_provider.as_ref()
     }
 
     pub fn software_update_provider(&self) -> Option<&SoftwareUpdateProviderConfig> {
-        self.file.software_update_provider
-            .as_ref()
+        self.file.software_update_provider.as_ref()
     }
 
     pub fn software_builder(&self) -> Option<&SoftwareBuilderConfig> {
-        self.file.software_builder
-            .as_ref()
+        self.file.software_builder.as_ref()
     }
 
     pub fn api_key(&self) -> &str {
@@ -138,8 +134,7 @@ pub fn get_config() -> Result<Config, GetConfigError> {
     };
 
     let root_certificate = match file_config.tls.clone() {
-        Some(tls_config) =>
-            Some(load_root_certificate(&tls_config.root_certificate)?),
+        Some(tls_config) => Some(load_root_certificate(&tls_config.root_certificate)?),
         None => None,
     };
 
@@ -149,8 +144,10 @@ pub fn get_config() -> Result<Config, GetConfigError> {
             .attach_printable("TLS must be configured when debug mode is false");
     }
 
-    let script_locations =
-        check_script_locations(&file_config.environment.scripts_dir, file_config.debug.unwrap_or_default())?;
+    let script_locations = check_script_locations(
+        &file_config.environment.scripts_dir,
+        file_config.debug.unwrap_or_default(),
+    )?;
 
     Ok(Config {
         file: file_config,
@@ -160,7 +157,10 @@ pub fn get_config() -> Result<Config, GetConfigError> {
     })
 }
 
-fn check_script_locations(script_dir: &Path, is_debug: bool) -> Result<ScriptLocations, GetConfigError> {
+fn check_script_locations(
+    script_dir: &Path,
+    is_debug: bool,
+) -> Result<ScriptLocations, GetConfigError> {
     let open_encryption = script_dir.join("open-encryption.sh");
     let close_encryption = script_dir.join("close-encryption.sh");
     let is_default_encryption_password = script_dir.join("is-default-encryption-password.sh");
@@ -178,10 +178,16 @@ fn check_script_locations(script_dir: &Path, is_debug: bool) -> Result<ScriptLoc
         errors.push(format!("Script not found: {}", close_encryption.display()));
     }
     if !is_default_encryption_password.exists() {
-        errors.push(format!("Script not found: {}", is_default_encryption_password.display()));
+        errors.push(format!(
+            "Script not found: {}",
+            is_default_encryption_password.display()
+        ));
     }
     if !change_encryption_password.exists() {
-        errors.push(format!("Script not found: {}", change_encryption_password.display()));
+        errors.push(format!(
+            "Script not found: {}",
+            change_encryption_password.display()
+        ));
     }
     if !start_backend.exists() {
         errors.push(format!("Script not found: {}", start_backend.display()));
@@ -215,9 +221,7 @@ fn check_script_locations(script_dir: &Path, is_debug: bool) -> Result<ScriptLoc
     }
 }
 
-fn load_root_certificate(
-    cert_path: &Path,
-) -> Result<reqwest::Certificate, GetConfigError> {
+fn load_root_certificate(cert_path: &Path) -> Result<reqwest::Certificate, GetConfigError> {
     let mut cert_reader =
         BufReader::new(std::fs::File::open(cert_path).into_error(GetConfigError::CreateTlsConfig)?);
     let all_certs = certs(&mut cert_reader).into_error(GetConfigError::CreateTlsConfig)?;
@@ -231,7 +235,8 @@ fn load_root_certificate(
         return Err(GetConfigError::CreateTlsConfig)
             .into_report()
             .attach_printable("Only one cert supported");
-    }.into_error(GetConfigError::CreateTlsConfig)?;
+    }
+    .into_error(GetConfigError::CreateTlsConfig)?;
     Ok(cert)
 }
 

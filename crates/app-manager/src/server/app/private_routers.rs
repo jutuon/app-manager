@@ -1,14 +1,10 @@
-
 use axum::{
     middleware,
-    routing::{get, post}, Router,
+    routing::{get, post},
+    Router,
 };
 
-use crate::{
-    api::{
-        self,
-    },
-};
+use crate::api::{self};
 
 use super::AppState;
 
@@ -39,21 +35,27 @@ impl PrivateRoutes {
                 api::manager::PATH_GET_LATEST_SOFTWARE,
                 get({
                     let state = self.state.clone();
-                    move |param1, param2, param3| api::manager::get_latest_software(param1, param2, param3, state)
+                    move |param1, param2, param3| {
+                        api::manager::get_latest_software(param1, param2, param3, state)
+                    }
                 }),
             )
             .route(
                 api::manager::PATH_POST_REQUEST_BUILD_SOFTWARE,
                 post({
                     let state = self.state.clone();
-                    move |param1, param2| api::manager::post_request_build_software(param1, param2, state)
+                    move |param1, param2| {
+                        api::manager::post_request_build_software(param1, param2, state)
+                    }
                 }),
             )
             .route(
                 api::manager::PATH_POST_RQUEST_SOFTWARE_UPDATE,
                 post({
                     let state = self.state.clone();
-                    move |param1, param2, param3| api::manager::post_request_software_update(param1, param2, param3, state)
+                    move |param1, param2, param3| {
+                        api::manager::post_request_software_update(param1, param2, param3, state)
+                    }
                 }),
             )
             .route(

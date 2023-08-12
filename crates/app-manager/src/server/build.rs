@@ -1,15 +1,22 @@
 //! Build backend server binary
 
-use std::{process::ExitStatus, sync::Arc, path::{PathBuf, Path}};
+use std::{
+    path::{Path, PathBuf},
+    process::ExitStatus,
+    sync::Arc,
+};
 
-
-use tokio::{task::JoinHandle, sync::mpsc, process::Command};
+use tokio::{process::Command, sync::mpsc, task::JoinHandle};
 use tracing::{info, warn};
 
+use crate::{
+    config::{file::SoftwareBuilderConfig, Config},
+    utils::IntoReportExt,
+};
 
-use crate::{config::{Config, file::SoftwareBuilderConfig}, utils::IntoReportExt};
-
-use manager_model::{DownloadType, SoftwareOptions, BuildInfo, MANAGER_REPOSITORY_NAME, BACKEND_REPOSITORY_NAME};
+use manager_model::{
+    BuildInfo, DownloadType, SoftwareOptions, BACKEND_REPOSITORY_NAME, MANAGER_REPOSITORY_NAME,
+};
 
 use super::ServerQuitWatcher;
 
@@ -90,11 +97,13 @@ impl BuildManagerHandle {
     pub async fn send_build_request(&self, software: SoftwareOptions) -> Result<(), BuildError> {
         match software {
             SoftwareOptions::Manager => {
-                self.sender.try_send(BuildManagerMessage::BuildNewManagerVersion)
+                self.sender
+                    .try_send(BuildManagerMessage::BuildNewManagerVersion)
                     .into_error(BuildError::BuildManagerNotAvailable)?;
             }
             SoftwareOptions::Backend => {
-                self.sender.try_send(BuildManagerMessage::BuildNewBackendVersion)
+                self.sender
+                    .try_send(BuildManagerMessage::BuildNewBackendVersion)
                     .into_error(BuildError::BuildManagerNotAvailable)?;
             }
         }
@@ -103,7 +112,8 @@ impl BuildManagerHandle {
     }
 
     pub async fn send_build_new_backend_version(&self) -> Result<(), BuildError> {
-        self.sender.try_send(BuildManagerMessage::BuildNewBackendVersion)
+        self.sender
+            .try_send(BuildManagerMessage::BuildNewBackendVersion)
             .into_error(BuildError::BuildManagerNotAvailable)?;
 
         Ok(())
@@ -123,16 +133,11 @@ impl BuildManager {
     ) -> (BuildManagerQuitHandle, BuildManagerHandle) {
         let (sender, receiver) = mpsc::channel(1);
 
-        let manager = Self {
-            config,
-            receiver,
-        };
+        let manager = Self { config, receiver };
 
         let task = tokio::spawn(manager.run(quit_notification));
 
-        let handle = BuildManagerHandle {
-            sender,
-        };
+        let handle = BuildManagerHandle { sender };
 
         let quit_handle = BuildManagerQuitHandle {
             task,
@@ -142,10 +147,7 @@ impl BuildManager {
         (quit_handle, handle)
     }
 
-    pub async fn run(
-        mut self,
-        mut quit_notification: ServerQuitWatcher,
-    ) {
+    pub async fn run(mut self, mut quit_notification: ServerQuitWatcher) {
         loop {
             tokio::select! {
                 message = self.receiver.recv() => {
@@ -166,10 +168,7 @@ impl BuildManager {
         }
     }
 
-    pub async fn handle_message(
-        &self,
-        message: BuildManagerMessage,
-    ) {
+    pub async fn handle_message(&self, message: BuildManagerMessage) {
         match message {
             BuildManagerMessage::BuildNewBackendVersion => {
                 info!("Building backend version");
@@ -201,7 +200,7 @@ impl BuildManager {
     }
 
     pub fn create_history_dir_if_needed(&self) -> PathBuf {
-       BuildDirCreator::create_history_dir_if_needed(&self.config)
+        BuildDirCreator::create_history_dir_if_needed(&self.config)
     }
 
     pub fn create_latest_dir_if_needed(&self) -> PathBuf {
@@ -213,7 +212,8 @@ impl BuildManager {
     }
 
     pub fn manager_repository(&self) -> PathBuf {
-        self.create_build_dir_if_needed().join(self.manager_repository_name())
+        self.create_build_dir_if_needed()
+            .join(self.manager_repository_name())
     }
 
     pub fn backend_repository_name(&self) -> &'static str {
@@ -221,7 +221,8 @@ impl BuildManager {
     }
 
     pub fn backend_repository(&self) -> PathBuf {
-        self.create_build_dir_if_needed().join(self.backend_repository_name())
+        self.create_build_dir_if_needed()
+            .join(self.backend_repository_name())
     }
 
     pub async fn git_refresh_backend_if_needed(&self) -> Result<(), BuildError> {
@@ -233,8 +234,9 @@ impl BuildManager {
             self.backend_repository_name(),
             builder_config.backend_branch.as_str(),
             &builder_config.backend_binary,
-            builder_config.backend_pre_build_script.as_deref()
-        ).await?;
+            builder_config.backend_pre_build_script.as_deref(),
+        )
+        .await?;
 
         Ok(())
     }
@@ -249,8 +251,9 @@ impl BuildManager {
             self.manager_repository_name(),
             builder_config.manager_branch.as_str(),
             &builder_config.manager_binary,
-            builder_config.manager_pre_build_script.as_deref()
-        ).await?;
+            builder_config.manager_pre_build_script.as_deref(),
+        )
+        .await?;
 
         Ok(())
     }
@@ -277,18 +280,11 @@ impl BuildManager {
         )
         .await?;
 
-        Self::git_pull_repository(
-            &repository_path,
-            repository_name,
-            repository_branch,
-        )
-        .await?;
+        Self::git_pull_repository(&repository_path, repository_name, repository_branch).await?;
 
         let latest_build_commit_sha = self.get_latest_build_commit_sha(binary).await?;
-        let current_commit_sha = Self::git_get_commit_sha(
-            &repository_path,
-            repository_name,
-        ).await?;
+        let current_commit_sha =
+            Self::git_get_commit_sha(&repository_path, repository_name).await?;
 
         if latest_build_commit_sha == current_commit_sha {
             info!("No new commits for {}", repository_name);
@@ -296,28 +292,16 @@ impl BuildManager {
         }
 
         if let Some(script) = pre_build_script {
-            self.run_pre_build_script(
-                script,
-                repository_name,
-                &repository_path,
-            )
-            .await?;
+            self.run_pre_build_script(script, repository_name, &repository_path)
+                .await?;
         }
 
-        let build_info = self.cargo_build(
-            &repository_path,
-            repository_name,
-            &binary,
-        )
-        .await?;
+        let build_info = self
+            .cargo_build(&repository_path, repository_name, &binary)
+            .await?;
 
-        self.copy_and_sign_binary(
-            &repository_path,
-            repository_name,
-            &binary,
-            build_info,
-        )
-        .await?;
+        self.copy_and_sign_binary(&repository_path, repository_name, &binary, build_info)
+            .await?;
 
         Ok(())
     }
@@ -347,7 +331,9 @@ impl BuildManager {
             .into_error(BuildError::ProcessWaitFailed)?;
 
         if !status.success() {
-            tracing::error!("Git clone failed. Make sure that repository address is in SSH known hosts.");
+            tracing::error!(
+                "Git clone failed. Make sure that repository address is in SSH known hosts."
+            );
             return Err(BuildError::CommandFailed(status).into());
         }
 
@@ -397,17 +383,15 @@ impl BuildManager {
             return Err(BuildError::CommandFailed(output.status).into());
         }
 
-        let sha = std::str::from_utf8(&output.stdout)
-            .into_error(BuildError::InvalidOutput)?;
+        let sha = std::str::from_utf8(&output.stdout).into_error(BuildError::InvalidOutput)?;
 
         Ok(sha.to_string())
     }
 
-    pub async fn get_latest_build_commit_sha(
-        &self,
-        binary: &str,
-    ) -> Result<String, BuildError> {
-        let latest_build_info = self.create_latest_dir_if_needed().join(format!("{}.json", binary));
+    pub async fn get_latest_build_commit_sha(&self, binary: &str) -> Result<String, BuildError> {
+        let latest_build_info = self
+            .create_latest_dir_if_needed()
+            .join(format!("{}.json", binary));
 
         if !latest_build_info.exists() {
             info!("No latest build info for {}", binary);
@@ -418,10 +402,13 @@ impl BuildManager {
             .await
             .into_error(BuildError::FileReadingFailed)?;
 
-        let build_info: BuildInfo = serde_json::from_str(&build_info)
-            .into_error(BuildError::InvalidInput)?;
+        let build_info: BuildInfo =
+            serde_json::from_str(&build_info).into_error(BuildError::InvalidInput)?;
 
-        info!("Latest {} build is from commit {}", binary, build_info.commit_sha);
+        info!(
+            "Latest {} build is from commit {}",
+            binary, build_info.commit_sha
+        );
         Ok(build_info.commit_sha)
     }
 
@@ -431,7 +418,10 @@ impl BuildManager {
         repository_name: &str,
         repository_path: &str,
     ) -> Result<(), BuildError> {
-        info!("Running pre-build script for {} repository", repository_name);
+        info!(
+            "Running pre-build script for {} repository",
+            repository_name
+        );
         let status: ExitStatus = Command::new(pre_build_script_path)
             .current_dir(repository_path)
             .status()
@@ -482,8 +472,8 @@ impl BuildManager {
             .into_error(BuildError::ProcessWaitFailed)?;
 
         if output.status.success() {
-            let output = std::str::from_utf8(&output.stdout)
-                .into_error(BuildError::InvalidOutput)?;
+            let output =
+                std::str::from_utf8(&output.stdout).into_error(BuildError::InvalidOutput)?;
 
             Ok(BinaryBuildInfoOutput(output.to_string()))
         } else {
@@ -506,11 +496,9 @@ impl BuildManager {
 
         let current_time = time::OffsetDateTime::now_utc();
 
-        let build_dir_for_current = self.create_history_dir_if_needed().join(format!(
-            "{}-{}",
-            repository_name,
-            current_time,
-        ));
+        let build_dir_for_current = self
+            .create_history_dir_if_needed()
+            .join(format!("{}-{}", repository_name, current_time,));
 
         Self::create_dir(&build_dir_for_current);
         let target_binary = build_dir_for_current.join(binary);
@@ -576,9 +564,12 @@ impl BuildManager {
         };
         let build_info_file = BuildDirCreator::build_info_json_name(binary);
         let build_info_path = build_dir_for_current.join(&build_info_file);
-        tokio::fs::write(&build_info_path, serde_json::to_string_pretty(&build_info).into_error(BuildError::FileWritingFailed)?)
-            .await
-            .into_error(BuildError::FileWritingFailed)?;
+        tokio::fs::write(
+            &build_info_path,
+            serde_json::to_string_pretty(&build_info).into_error(BuildError::FileWritingFailed)?,
+        )
+        .await
+        .into_error(BuildError::FileWritingFailed)?;
 
         let latest_dir = self.create_latest_dir_if_needed();
         tokio::fs::copy(&binary_path, latest_dir.join(binary))
@@ -595,7 +586,8 @@ impl BuildManager {
     }
 
     pub fn builder_config(&self) -> Result<&SoftwareBuilderConfig, BuildError> {
-        self.config.software_builder()
+        self.config
+            .software_builder()
             .ok_or(BuildError::SoftwareBuilderConfigMissing.into())
     }
 
@@ -606,7 +598,11 @@ impl BuildManager {
                     info!("{} directory created", dir.display());
                 }
                 Err(e) => {
-                    warn!("{} directory creation failed. Error: {:?}", dir.display(), e);
+                    warn!(
+                        "{} directory creation failed. Error: {:?}",
+                        dir.display(),
+                        e
+                    );
                 }
             }
         }
@@ -617,9 +613,7 @@ const PATH_CHARACTERS_WHITELIST: &str =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_./";
 
 fn whitelist_chars(input: &str, whitelist: &str) -> String {
-    let invalid_chars = input.chars()
-        .filter(|&c| !whitelist.contains(c))
-        .collect();
+    let invalid_chars = input.chars().filter(|&c| !whitelist.contains(c)).collect();
     invalid_chars
 }
 
@@ -628,15 +622,21 @@ fn validate_path(input: &Path) -> Result<(), BuildError> {
         return Err(BuildError::InvalidKeyPath.into());
     }
 
-    let unaccepted = whitelist_chars(input.as_os_str().to_string_lossy().as_ref(), PATH_CHARACTERS_WHITELIST);
+    let unaccepted = whitelist_chars(
+        input.as_os_str().to_string_lossy().as_ref(),
+        PATH_CHARACTERS_WHITELIST,
+    );
     if !unaccepted.is_empty() {
-        tracing::error!("Invalid characters {} in path: {}", unaccepted, input.display());
+        tracing::error!(
+            "Invalid characters {} in path: {}",
+            unaccepted,
+            input.display()
+        );
         return Err(BuildError::InvalidKeyPath.into());
     }
 
     Ok(())
 }
-
 
 pub struct BuildDirCreator;
 
@@ -703,13 +703,18 @@ impl BuildDirCreator {
         format!("{}.json", binary)
     }
 
-    pub async fn get_data(config: &Config, software: SoftwareOptions, download: DownloadType) -> Result<Vec<u8>, BuildError> {
-        let builder_config = config.software_builder()
+    pub async fn get_data(
+        config: &Config,
+        software: SoftwareOptions,
+        download: DownloadType,
+    ) -> Result<Vec<u8>, BuildError> {
+        let builder_config = config
+            .software_builder()
             .ok_or(BuildError::SoftwareBuilderConfigMissing)?;
 
         let binary = match software {
             SoftwareOptions::Manager => &builder_config.manager_binary,
-            SoftwareOptions::Backend => &builder_config.backend_binary
+            SoftwareOptions::Backend => &builder_config.backend_binary,
         };
 
         let latest_dir = Self::create_latest_dir_if_needed(config);

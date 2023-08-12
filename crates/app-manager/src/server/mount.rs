@@ -1,18 +1,23 @@
 //! Mount secure file storage if needed
 //!
 
-
-use std::{sync::Arc, path::Path, process::{Stdio, ExitStatus}};
-
+use std::{
+    path::Path,
+    process::{ExitStatus, Stdio},
+    sync::Arc,
+};
 
 use manager_model::DataEncryptionKey;
-use tokio::{process::Command, io::{AsyncWriteExt}};
+use tokio::{io::AsyncWriteExt, process::Command};
 
-use error_stack::{Result, ResultExt, IntoReport};
-use tracing::{info};
+use error_stack::{IntoReport, Result, ResultExt};
+use tracing::info;
 
-
-use crate::{config::{Config, file::EncryptionKeyProviderConfig}, api::GetApiManager, utils::IntoReportExt};
+use crate::{
+    api::GetApiManager,
+    config::{file::EncryptionKeyProviderConfig, Config},
+    utils::IntoReportExt,
+};
 
 use super::app::AppState;
 
@@ -38,20 +43,22 @@ pub struct MountManager {
 
 impl MountManager {
     pub fn new(config: Arc<Config>, app_state: AppState) -> Self {
-        Self {
-            config,
-            app_state,
-        }
+        Self { config, app_state }
     }
 
-    pub async fn mount_if_needed(&self, _provider: &EncryptionKeyProviderConfig) -> Result<(), MountError> {
+    pub async fn mount_if_needed(
+        &self,
+        _provider: &EncryptionKeyProviderConfig,
+    ) -> Result<(), MountError> {
         if Path::new(self.config.secure_storage_dir()).exists() {
             info!("Encrypted storage is already mounted");
             // Already mounted.
             return Ok(());
         }
 
-        let key = self.app_state.api_manager()
+        let key = self
+            .app_state
+            .api_manager()
             .get_encryption_key()
             .await
             .change_context(MountError::GetKeyFailed)?;
@@ -68,17 +75,17 @@ impl MountManager {
             .into_error(MountError::ProcessStartFailed)?;
 
         if let Some(stdin) = c.stdin.as_mut() {
-            stdin.write_all(key.key.as_bytes())
+            stdin
+                .write_all(key.key.as_bytes())
                 .await
                 .into_error(MountError::ProcessStdinFailed)?;
-            stdin.shutdown()
+            stdin
+                .shutdown()
                 .await
                 .into_error(MountError::ProcessStdinFailed)?;
         }
 
-        let status = c.wait()
-            .await
-            .into_error(MountError::ProcessStartFailed)?;
+        let status = c.wait().await.into_error(MountError::ProcessStartFailed)?;
 
         if status.success() {
             info!("Opening was successfull.");
@@ -118,7 +125,11 @@ impl MountManager {
 
     async fn change_password_if_needed(&self, key: DataEncryptionKey) -> Result<(), MountError> {
         let c = Command::new("sudo")
-            .arg(self.config.script_locations().is_default_encryption_password())
+            .arg(
+                self.config
+                    .script_locations()
+                    .is_default_encryption_password(),
+            )
             .status()
             .await
             .into_error(MountError::ProcessStartFailed)?;
@@ -131,17 +142,17 @@ impl MountManager {
                 .into_error(MountError::ProcessStartFailed)?;
 
             if let Some(stdin) = c.stdin.as_mut() {
-                stdin.write_all(key.key.as_bytes())
+                stdin
+                    .write_all(key.key.as_bytes())
                     .await
                     .into_error(MountError::ProcessStdinFailed)?;
-                stdin.shutdown()
+                stdin
+                    .shutdown()
                     .await
                     .into_error(MountError::ProcessStdinFailed)?;
             }
 
-            let status = c.wait()
-                .await
-                .into_error(MountError::ProcessStartFailed)?;
+            let status = c.wait().await.into_error(MountError::ProcessStartFailed)?;
 
             if status.success() {
                 info!("Password change was successfull.");

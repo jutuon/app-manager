@@ -2,23 +2,20 @@ pub mod private_routers;
 
 use std::sync::Arc;
 
-use axum::{
-    Router,
-};
-
-
-
+use axum::Router;
 
 use crate::{
-    api::{
-        GetConfig, GetApiManager, GetBuildManager, GetUpdateManager,
-    },
+    api::{GetApiManager, GetBuildManager, GetConfig, GetUpdateManager},
     config::Config,
 };
 
 use self::private_routers::PrivateRoutes;
 
-use super::{client::{ApiManager, ApiClient}, build::BuildManagerHandle, update::{UpdateManagerHandle}};
+use super::{
+    build::BuildManagerHandle,
+    client::{ApiClient, ApiManager},
+    update::UpdateManagerHandle,
+};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -48,10 +45,7 @@ impl GetUpdateManager for AppState {
 
 impl GetApiManager for AppState {
     fn api_manager(&self) -> ApiManager<'_> {
-        ApiManager::new(
-            &self.config,
-            &self.api,
-        )
+        ApiManager::new(&self.config, &self.api)
     }
 }
 
@@ -73,9 +67,7 @@ impl App {
             update_manager,
         };
 
-        Self {
-            state,
-        }
+        Self { state }
     }
 
     pub fn state(&self) -> AppState {

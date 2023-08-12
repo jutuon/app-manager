@@ -1,25 +1,16 @@
 //! Get system info
 
-use std::{process::ExitStatus};
+use std::process::ExitStatus;
 
-use manager_model::{SystemInfo, CommandOutput, SystemInfoList};
+use manager_model::{CommandOutput, SystemInfo, SystemInfoList};
 
+use tokio::process::Command;
 
+use crate::{config::Config, utils::IntoReportExt};
 
+use super::client::ApiManager;
 
-
-use tokio::{process::Command};
-
-
-
-use crate::{config::{Config}, utils::IntoReportExt};
-
-
-
-use super::{client::{ApiManager}};
-
-use error_stack::{Result};
-
+use error_stack::Result;
 
 #[derive(thiserror::Error, Debug)]
 pub enum SystemInfoError {
@@ -48,39 +39,38 @@ pub enum SystemInfoError {
     ApiRequest,
 }
 
-
 pub struct SystemInfoGetter;
 
 impl SystemInfoGetter {
-    pub async fn system_info_all(config: &Config, api: &ApiManager<'_>) -> Result<SystemInfoList, SystemInfoError> {
+    pub async fn system_info_all(
+        config: &Config,
+        api: &ApiManager<'_>,
+    ) -> Result<SystemInfoList, SystemInfoError> {
         let system_info = Self::system_info(config).await?;
         let mut system_infos = vec![system_info];
 
         if let Some(info_config) = config.system_info() {
             for service in info_config.remote_managers.iter().flatten() {
-                match api
-                    .system_info(&service.name)
-                    .await {
-                        Ok(info) => {
-                            let info = SystemInfo {
-                                name: format!("Remote manager {}, remote name: {}", service.name, info.name),
-                                info: info.info,
-                            };
-                            system_infos.push(info);
-
-                        },
-                        Err(e) => {
-                            tracing::error!("Failed to get system info from {}: {:?}", service.name, e);
-                            let _error = e.to_string();
-
-                        },
+                match api.system_info(&service.name).await {
+                    Ok(info) => {
+                        let info = SystemInfo {
+                            name: format!(
+                                "Remote manager {}, remote name: {}",
+                                service.name, info.name
+                            ),
+                            info: info.info,
+                        };
+                        system_infos.push(info);
                     }
+                    Err(e) => {
+                        tracing::error!("Failed to get system info from {}: {:?}", service.name, e);
+                        let _error = e.to_string();
+                    }
+                }
             }
         }
 
-        Ok(SystemInfoList {
-            info: system_infos,
-        })
+        Ok(SystemInfoList { info: system_infos })
     }
 
     pub async fn system_info(config: &Config) -> Result<SystemInfo, SystemInfoError> {
@@ -94,19 +84,11 @@ impl SystemInfoGetter {
         let username = whoami.output.trim().to_string();
         let top = Self::run_top(&username).await?;
 
-        let mut commands = vec![
-            df,
-            df_inodes,
-            uptime,
-            free,
-            top,
-            print_logs,
-        ];
+        let mut commands = vec![df, df_inodes, uptime, free, top, print_logs];
 
         if let Some(info_config) = config.system_info() {
             for service in info_config.log_services.iter() {
-                let journalctl =
-                    Self::run_journalctl(service).await?;
+                let journalctl = Self::run_journalctl(service).await?;
                 commands.push(journalctl);
             }
         }
@@ -165,12 +147,16 @@ impl SystemInfoGetter {
             .into_error(SystemInfoError::ProcessWaitFailed)?;
 
         if !output.status.success() {
-            tracing::error!("{} {} failed with status: {:?}", cmd, args.join(" "), output.status);
+            tracing::error!(
+                "{} {} failed with status: {:?}",
+                cmd,
+                args.join(" "),
+                output.status
+            );
             return Err(SystemInfoError::CommandFailed(output.status).into());
         }
 
-        let output = String::from_utf8(output.stdout)
-            .into_error(SystemInfoError::InvalidOutput)?;
+        let output = String::from_utf8(output.stdout).into_error(SystemInfoError::InvalidOutput)?;
 
         Ok(CommandOutput {
             name: format!("{} {}", cmd, args.join(" ")),

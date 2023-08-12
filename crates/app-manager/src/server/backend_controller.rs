@@ -1,20 +1,12 @@
 //! Start and stop backend
 
+use std::process::ExitStatus;
 
-use std::{process::ExitStatus};
+use tokio::process::Command;
 
-
-use tokio::{process::Command};
-
-
-
-use crate::{config::{Config}, utils::IntoReportExt};
-
-
-
+use crate::{config::Config, utils::IntoReportExt};
 
 use error_stack::Result;
-
 
 #[derive(thiserror::Error, Debug)]
 pub enum ControllerError {
@@ -35,13 +27,9 @@ pub struct BackendController<'a> {
     config: &'a Config,
 }
 
-impl <'a> BackendController<'a> {
-    pub fn new(
-        config: &'a Config,
-    ) -> Self {
-        Self {
-            config,
-        }
+impl<'a> BackendController<'a> {
+    pub fn new(config: &'a Config) -> Self {
+        Self { config }
     }
 
     pub async fn start_backend(&self) -> Result<(), ControllerError> {

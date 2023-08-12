@@ -9,8 +9,7 @@ use utoipa::{Modify, OpenApi};
 
 use crate::{
     config::Config,
-    server::{client::{ApiManager}, build::{BuildManagerHandle}, update::UpdateManagerHandle
-    },
+    server::{build::BuildManagerHandle, client::ApiManager, update::UpdateManagerHandle},
 };
 
 use utils::SecurityApiTokenDefault;

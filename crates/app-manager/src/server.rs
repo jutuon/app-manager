@@ -1,15 +1,15 @@
 pub mod app;
-pub mod client;
-pub mod mount;
+pub mod backend_controller;
 pub mod build;
+pub mod client;
+pub mod info;
+pub mod mount;
 pub mod reboot;
 pub mod update;
-pub mod info;
-pub mod backend_controller;
 
 use std::{net::SocketAddr, pin::Pin, sync::Arc, time::Duration};
 
-use axum::{Router};
+use axum::Router;
 use futures::future::poll_fn;
 use hyper::server::{
     accept::Accept,
@@ -18,23 +18,30 @@ use hyper::server::{
 
 use tokio::{
     net::TcpListener,
-    signal::{self, unix::{SignalKind, Signal}},
+    signal::{
+        self,
+        unix::{Signal, SignalKind},
+    },
     sync::{broadcast, mpsc},
     task::JoinHandle,
 };
 use tokio_rustls::rustls::ServerConfig;
 use tokio_rustls::TlsAcceptor;
-use tower::{MakeService};
-use tower_http::trace::{TraceLayer};
+use tower::MakeService;
+use tower_http::trace::TraceLayer;
 use tracing::{error, info, log::warn};
-use utoipa::{OpenApi};
+use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
     api::{ApiDoc, GetBuildManager, GetUpdateManager},
-    config::{Config, info::{BUILD_INFO_CARGO_PKG_VERSION, BUILD_INFO_GIT_DESCRIBE}},
+    config::{
+        info::{BUILD_INFO_CARGO_PKG_VERSION, BUILD_INFO_GIT_DESCRIBE},
+        Config,
+    },
     server::{
-        app::{App}, client::ApiClient, mount::MountManager, build::BuildManager, backend_controller::BackendController,
+        app::App, backend_controller::BackendController, build::BuildManager, client::ApiClient,
+        mount::MountManager,
     },
 };
 
@@ -58,7 +65,10 @@ impl AppServer {
     pub async fn run(self) {
         tracing_subscriber::fmt::init();
 
-        info!("app-manager version: {}-{}", BUILD_INFO_CARGO_PKG_VERSION, BUILD_INFO_GIT_DESCRIBE);
+        info!(
+            "app-manager version: {}-{}",
+            BUILD_INFO_CARGO_PKG_VERSION, BUILD_INFO_GIT_DESCRIBE
+        );
 
         if self.config.debug_mode() {
             warn!("Debug mode is enabled");
@@ -70,18 +80,12 @@ impl AppServer {
         // Start build manager
 
         let (build_manager_quit_handle, build_manager_handle) =
-            BuildManager::new(
-                self.config.clone(),
-                server_quit_watcher.resubscribe()
-            );
+            BuildManager::new(self.config.clone(), server_quit_watcher.resubscribe());
 
         // Start reboot manager
 
         let (reboot_manager_quit_handle, reboot_manager_handle) =
-            reboot::RebootManager::new(
-                self.config.clone(),
-                server_quit_watcher.resubscribe(),
-            );
+            reboot::RebootManager::new(self.config.clone(), server_quit_watcher.resubscribe());
 
         // Create API client
 
@@ -89,17 +93,22 @@ impl AppServer {
 
         // Start update manager
 
-        let (update_manager_quit_handle, update_manager_handle) =
-            update::UpdateManager::new(
-                self.config.clone(),
-                server_quit_watcher.resubscribe(),
-                api_client.clone(),
-                reboot_manager_handle,
-            );
+        let (update_manager_quit_handle, update_manager_handle) = update::UpdateManager::new(
+            self.config.clone(),
+            server_quit_watcher.resubscribe(),
+            api_client.clone(),
+            reboot_manager_handle,
+        );
 
         // Create app
 
-        let mut app = App::new(self.config.clone(), api_client, build_manager_handle.into(), update_manager_handle.into()).await;
+        let mut app = App::new(
+            self.config.clone(),
+            api_client,
+            build_manager_handle.into(),
+            update_manager_handle.into(),
+        )
+        .await;
 
         // Start API server
 
@@ -109,8 +118,7 @@ impl AppServer {
 
         // Mount encrypted storage if needed
 
-        let mount_manager =
-            MountManager::new(self.config.clone(), app.state());
+        let mount_manager = MountManager::new(self.config.clone(), app.state());
 
         if let Some(encryption_key_provider) = self.config.encryption_key_provider() {
             loop {
@@ -137,7 +145,12 @@ impl AppServer {
         // Build new version if needed
 
         if self.config.software_builder().is_some() {
-            match app.state().build_manager().send_build_new_backend_version().await {
+            match app
+                .state()
+                .build_manager()
+                .send_build_new_backend_version()
+                .await
+            {
                 Ok(()) => {
                     info!("Build requested");
                 }
@@ -153,7 +166,12 @@ impl AppServer {
             if !update_config.backend_install_location.exists() {
                 info!("Backend is not installed. Downloading latest software");
 
-                match app.state().update_manager().send_update_backend_request(false).await {
+                match app
+                    .state()
+                    .update_manager()
+                    .send_update_backend_request(false)
+                    .await
+                {
                     Ok(()) => {
                         info!("Backend installation requested");
                     }
@@ -243,8 +261,7 @@ impl AppServer {
         let router = {
             let router = self.create_public_router(app);
             let router = if self.config.debug_mode() {
-                router
-                    .merge(Self::create_swagger_ui())
+                router.merge(Self::create_swagger_ui())
             } else {
                 router
             };
@@ -363,7 +380,7 @@ impl AppServer {
 
         tokio::spawn(async move {
             let shutdown_handle = normal_api_server.with_graceful_shutdown(async {
-                let _ =  quit_notification.recv().await;
+                let _ = quit_notification.recv().await;
             });
 
             match shutdown_handle.await {

@@ -1,4 +1,7 @@
-use std::{net::SocketAddr, sync::atomic::{AtomicBool, Ordering}};
+use std::{
+    net::SocketAddr,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use axum::{extract::ConnectInfo, middleware::Next, response::Response};
 use headers::{Header, HeaderValue};
@@ -36,7 +39,10 @@ pub async fn authenticate_with_api_key<T, S: GetConfig>(
             Ok(next.run(req).await)
         } else {
             API_SECURITY_LOCK.store(true, Ordering::Relaxed);
-            tracing::error!("API key has been guessed. API is now locked. Guesser information, addr: {}", addr);
+            tracing::error!(
+                "API key has been guessed. API is now locked. Guesser information, addr: {}",
+                addr
+            );
             Err(StatusCode::LOCKED)
         }
     }

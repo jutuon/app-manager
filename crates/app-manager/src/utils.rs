@@ -102,7 +102,6 @@ pub trait ErrorConversion: ResultExt + Sized {
     }
 }
 
-
 pub type ErrorContainer<E> = Option<Report<E>>;
 
 pub trait AppendErr: Sized {

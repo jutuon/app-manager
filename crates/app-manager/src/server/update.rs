@@ -1,18 +1,27 @@
-
 //! Handle software updates
 
-use std::{process::ExitStatus, sync::{Arc, atomic::Ordering}, path::{PathBuf, Path}};
+use std::{
+    path::{Path, PathBuf},
+    process::ExitStatus,
+    sync::{atomic::Ordering, Arc},
+};
 
-
-use tokio::{task::JoinHandle, sync::mpsc, process::Command};
+use tokio::{process::Command, sync::mpsc, task::JoinHandle};
 use tracing::{info, warn};
 
+use crate::{
+    config::{file::SoftwareUpdateProviderConfig, Config},
+    utils::IntoReportExt,
+};
 
-use crate::{config::{Config, file::{SoftwareUpdateProviderConfig}}, utils::IntoReportExt};
+use manager_model::{BuildInfo, SoftwareInfo, SoftwareOptions};
 
-use manager_model::{SoftwareOptions, BuildInfo, SoftwareInfo};
-
-use super::{ServerQuitWatcher, client::{ApiClient, ApiManager}, build::BuildDirCreator, reboot::{REBOOT_ON_NEXT_CHECK, RebootManagerHandle}};
+use super::{
+    build::BuildDirCreator,
+    client::{ApiClient, ApiManager},
+    reboot::{RebootManagerHandle, REBOOT_ON_NEXT_CHECK},
+    ServerQuitWatcher,
+};
 
 use error_stack::{Result, ResultExt};
 
@@ -102,14 +111,22 @@ pub struct UpdateManagerHandle {
 
 impl UpdateManagerHandle {
     pub async fn send_update_manager_request(&self, force_reboot: bool) -> Result<(), UpdateError> {
-        self.sender.try_send(UpdateManagerMessage::UpdateSoftware { force_reboot, software: SoftwareOptions::Manager })
+        self.sender
+            .try_send(UpdateManagerMessage::UpdateSoftware {
+                force_reboot,
+                software: SoftwareOptions::Manager,
+            })
             .into_error(UpdateError::UpdateManagerNotAvailable)?;
 
         Ok(())
     }
 
     pub async fn send_update_backend_request(&self, force_reboot: bool) -> Result<(), UpdateError> {
-        self.sender.try_send(UpdateManagerMessage::UpdateSoftware { force_reboot, software: SoftwareOptions::Backend })
+        self.sender
+            .try_send(UpdateManagerMessage::UpdateSoftware {
+                force_reboot,
+                software: SoftwareOptions::Backend,
+            })
             .into_error(UpdateError::UpdateManagerNotAvailable)?;
 
         Ok(())
@@ -142,9 +159,7 @@ impl UpdateManager {
 
         let task = tokio::spawn(manager.run(quit_notification));
 
-        let handle = UpdateManagerHandle {
-            sender,
-        };
+        let handle = UpdateManagerHandle { sender };
 
         let quit_handle = UpdateManagerQuitHandle {
             task,
@@ -154,10 +169,7 @@ impl UpdateManager {
         (quit_handle, handle)
     }
 
-    pub async fn run(
-        mut self,
-        mut quit_notification: ServerQuitWatcher,
-    ) {
+    pub async fn run(mut self, mut quit_notification: ServerQuitWatcher) {
         loop {
             tokio::select! {
                 message = self.receiver.recv() => {
@@ -178,32 +190,36 @@ impl UpdateManager {
         }
     }
 
-    pub async fn handle_message(
-        &self,
-        message: UpdateManagerMessage,
-    ) {
+    pub async fn handle_message(&self, message: UpdateManagerMessage) {
         match message {
-            UpdateManagerMessage::UpdateSoftware { force_reboot, software } => {
-                match self.update_software(force_reboot, software).await {
-                    Ok(()) => {
-                        info!("Software update finished");
-                    }
-                    Err(e) => {
-                        warn!("Software update failed. Error: {:?}", e);
-                    }
+            UpdateManagerMessage::UpdateSoftware {
+                force_reboot,
+                software,
+            } => match self.update_software(force_reboot, software).await {
+                Ok(()) => {
+                    info!("Software update finished");
                 }
-            }
+                Err(e) => {
+                    warn!("Software update failed. Error: {:?}", e);
+                }
+            },
         }
     }
 
-    pub async fn download_latest_info(&self, software: SoftwareOptions) -> Result<BuildInfo, UpdateError> {
+    pub async fn download_latest_info(
+        &self,
+        software: SoftwareOptions,
+    ) -> Result<BuildInfo, UpdateError> {
         let api = ApiManager::new(&self.config, &self.api_client);
         api.get_latest_build_info(software)
             .await
             .change_context(UpdateError::ApiRequest)
     }
 
-    pub async fn download_latest_encrypted_binary(&self, software: SoftwareOptions) -> Result<Vec<u8>, UpdateError> {
+    pub async fn download_latest_encrypted_binary(
+        &self,
+        software: SoftwareOptions,
+    ) -> Result<Vec<u8>, UpdateError> {
         let api = ApiManager::new(&self.config, &self.api_client);
         api.get_latest_encrypted_software_binary(software)
             .await
@@ -211,41 +227,54 @@ impl UpdateManager {
     }
 
     /// Returns empty BuildInfo if it does not exists.
-    pub async fn read_latest_build_info(&self, software: SoftwareOptions) -> Result<BuildInfo, UpdateError> {
+    pub async fn read_latest_build_info(
+        &self,
+        software: SoftwareOptions,
+    ) -> Result<BuildInfo, UpdateError> {
         let update_dir = UpdateDirCreator::create_update_dir_if_needed(&self.config);
-        let current_info = update_dir.join(BuildDirCreator::build_info_json_name(software.to_str()));
+        let current_info =
+            update_dir.join(BuildDirCreator::build_info_json_name(software.to_str()));
         self.read_build_info(&current_info).await
     }
 
     /// Returns empty BuildInfo if it does not exists.
-    pub async fn read_latest_installed_build_info(&self, software: SoftwareOptions) -> Result<BuildInfo, UpdateError> {
+    pub async fn read_latest_installed_build_info(
+        &self,
+        software: SoftwareOptions,
+    ) -> Result<BuildInfo, UpdateError> {
         let update_dir = UpdateDirCreator::create_update_dir_if_needed(&self.config);
-        let current_info = update_dir.join(UpdateDirCreator::installed_build_info_json_name(software.to_str()));
+        let current_info = update_dir.join(UpdateDirCreator::installed_build_info_json_name(
+            software.to_str(),
+        ));
         self.read_build_info(&current_info).await
     }
 
     /// Returns empty BuildInfo if it does not exists.
     async fn read_build_info(&self, current_info: &Path) -> Result<BuildInfo, UpdateError> {
         if !current_info.exists() {
-            return Ok(BuildInfo::default())
+            return Ok(BuildInfo::default());
         }
 
         let current_build_info = tokio::fs::read_to_string(&current_info)
             .await
             .into_error(UpdateError::FileReadingFailed)?;
 
-        let current_build_info = serde_json::from_str(&current_build_info)
-            .into_error(UpdateError::InvalidInput)?;
+        let current_build_info =
+            serde_json::from_str(&current_build_info).into_error(UpdateError::InvalidInput)?;
 
         Ok(current_build_info)
     }
 
-
-    pub async fn download_and_decrypt_latest_software(&self, latest_version: &BuildInfo, software: SoftwareOptions) -> Result<(), UpdateError> {
+    pub async fn download_and_decrypt_latest_software(
+        &self,
+        latest_version: &BuildInfo,
+        software: SoftwareOptions,
+    ) -> Result<(), UpdateError> {
         let encrypted_binary = self.download_latest_encrypted_binary(software).await?;
 
         let update_dir = UpdateDirCreator::create_update_dir_if_needed(&self.config);
-        let encrypted_binary_path = update_dir.join(BuildDirCreator::encrypted_binary_name(software.to_str()));
+        let encrypted_binary_path =
+            update_dir.join(BuildDirCreator::encrypted_binary_name(software.to_str()));
         tokio::fs::write(&encrypted_binary_path, encrypted_binary)
             .await
             .into_error(UpdateError::FileWritingFailed)?;
@@ -255,22 +284,35 @@ impl UpdateManager {
         self.decrypt_encrypted_binary(&encrypted_binary_path, &binary_path)
             .await?;
 
-        let latest_build_info_path = update_dir.join(BuildDirCreator::build_info_json_name(software.to_str()));
-        tokio::fs::write(&latest_build_info_path, serde_json::to_string_pretty(&latest_version).into_error(UpdateError::InvalidInput)?)
-            .await
-            .into_error(UpdateError::FileWritingFailed)?;
+        let latest_build_info_path =
+            update_dir.join(BuildDirCreator::build_info_json_name(software.to_str()));
+        tokio::fs::write(
+            &latest_build_info_path,
+            serde_json::to_string_pretty(&latest_version).into_error(UpdateError::InvalidInput)?,
+        )
+        .await
+        .into_error(UpdateError::FileWritingFailed)?;
 
         Ok(())
     }
 
-    pub async fn install_latest_software(&self, latest_version: &BuildInfo, force_reboot: bool, software: SoftwareOptions) -> Result<(), UpdateError> {
+    pub async fn install_latest_software(
+        &self,
+        latest_version: &BuildInfo,
+        force_reboot: bool,
+        software: SoftwareOptions,
+    ) -> Result<(), UpdateError> {
         let update_dir = UpdateDirCreator::create_update_dir_if_needed(&self.config);
         let binary_path = update_dir.join(software.to_str());
 
-        let installed_build_info_path = update_dir.join(UpdateDirCreator::installed_build_info_json_name(software.to_str()));
+        let installed_build_info_path = update_dir.join(
+            UpdateDirCreator::installed_build_info_json_name(software.to_str()),
+        );
 
         if installed_build_info_path.exists() {
-            let installed_old_build_info_path = update_dir.join(UpdateDirCreator::installed_old_build_info_json_name(software.to_str()));
+            let installed_old_build_info_path = update_dir.join(
+                UpdateDirCreator::installed_old_build_info_json_name(software.to_str()),
+            );
             tokio::fs::rename(&installed_build_info_path, &installed_old_build_info_path)
                 .await
                 .into_error(UpdateError::FileMovingFailed)?;
@@ -278,14 +320,20 @@ impl UpdateManager {
 
         self.replace_binary(&binary_path, software).await?;
 
-        tokio::fs::write(&installed_build_info_path, serde_json::to_string_pretty(&latest_version).into_error(UpdateError::InvalidInput)?)
-            .await
-            .into_error(UpdateError::FileWritingFailed)?;
+        tokio::fs::write(
+            &installed_build_info_path,
+            serde_json::to_string_pretty(&latest_version).into_error(UpdateError::InvalidInput)?,
+        )
+        .await
+        .into_error(UpdateError::FileWritingFailed)?;
 
         REBOOT_ON_NEXT_CHECK.store(true, Ordering::Relaxed);
 
         if force_reboot {
-            self.reboot_manager_handle.reboot_now().await.change_context(UpdateError::RebootFailed)?;
+            self.reboot_manager_handle
+                .reboot_now()
+                .await
+                .change_context(UpdateError::RebootFailed)?;
             info!("Rebooting now");
         } else {
             info!("Rebooting on next check");
@@ -294,13 +342,21 @@ impl UpdateManager {
         Ok(())
     }
 
-    pub async fn update_software(&self, force_reboot: bool, software: SoftwareOptions) -> Result<(), UpdateError> {
+    pub async fn update_software(
+        &self,
+        force_reboot: bool,
+        software: SoftwareOptions,
+    ) -> Result<(), UpdateError> {
         let current_version = self.read_latest_build_info(software).await?;
         let latest_version = self.download_latest_info(software).await?;
 
         if current_version != latest_version {
-            info!("Downloading and decrypting software...\n{:#?}", latest_version);
-            self.download_and_decrypt_latest_software(&latest_version, software).await?;
+            info!(
+                "Downloading and decrypting software...\n{:#?}",
+                latest_version
+            );
+            self.download_and_decrypt_latest_software(&latest_version, software)
+                .await?;
             info!("Software is now downloaded and decrypted.");
         } else {
             info!("Downloaded software is up to date.\n{:#?}", current_version);
@@ -309,16 +365,24 @@ impl UpdateManager {
         let latest_installed_version = self.read_latest_installed_build_info(software).await?;
         if latest_version != latest_installed_version {
             info!("Installing software.\n{:#?}", latest_version);
-            self.install_latest_software(&latest_version, force_reboot, software).await?;
+            self.install_latest_software(&latest_version, force_reboot, software)
+                .await?;
             info!("Software installation completed.");
         } else {
-            info!("Installed software is up to date.\n{:#?}", latest_installed_version);
+            info!(
+                "Installed software is up to date.\n{:#?}",
+                latest_installed_version
+            );
         }
 
-       Ok(())
+        Ok(())
     }
 
-    pub async fn decrypt_encrypted_binary(&self, encrypted: &Path, decrypted: &Path) -> Result<(), UpdateError> {
+    pub async fn decrypt_encrypted_binary(
+        &self,
+        encrypted: &Path,
+        decrypted: &Path,
+    ) -> Result<(), UpdateError> {
         if decrypted.exists() {
             info!("Remove previous binary {}", decrypted.display());
             tokio::fs::remove_file(&decrypted)
@@ -360,7 +424,11 @@ impl UpdateManager {
         Ok(())
     }
 
-    pub async fn replace_binary(&self, binary: &Path, software: SoftwareOptions) -> Result<(), UpdateError> {
+    pub async fn replace_binary(
+        &self,
+        binary: &Path,
+        software: SoftwareOptions,
+    ) -> Result<(), UpdateError> {
         let target = match software {
             SoftwareOptions::Manager => self.updater_config()?.manager_install_location.clone(),
             SoftwareOptions::Backend => self.updater_config()?.backend_install_location.clone(),
@@ -391,11 +459,11 @@ impl UpdateManager {
     }
 
     pub fn updater_config(&self) -> Result<&SoftwareUpdateProviderConfig, UpdateError> {
-        self.config.software_update_provider()
+        self.config
+            .software_update_provider()
             .ok_or(UpdateError::SoftwareUpdaterConfigMissing.into())
     }
 }
-
 
 pub struct UpdateDirCreator;
 
@@ -428,16 +496,20 @@ impl UpdateDirCreator {
 
     pub async fn current_software(config: &Config) -> Result<SoftwareInfo, UpdateError> {
         let update_dir = Self::create_update_dir_if_needed(config);
-        let manager_info_path = update_dir.join(Self::installed_build_info_json_name(SoftwareOptions::Manager.to_str()));
-        let backend_info_path = update_dir.join(Self::installed_build_info_json_name(SoftwareOptions::Backend.to_str()));
+        let manager_info_path = update_dir.join(Self::installed_build_info_json_name(
+            SoftwareOptions::Manager.to_str(),
+        ));
+        let backend_info_path = update_dir.join(Self::installed_build_info_json_name(
+            SoftwareOptions::Backend.to_str(),
+        ));
         let mut info_vec = Vec::new();
 
         if manager_info_path.exists() {
             let manager_info = tokio::fs::read_to_string(&manager_info_path)
                 .await
                 .into_error(UpdateError::FileReadingFailed)?;
-            let manager_info = serde_json::from_str(&manager_info)
-                .into_error(UpdateError::InvalidInput)?;
+            let manager_info =
+                serde_json::from_str(&manager_info).into_error(UpdateError::InvalidInput)?;
             info_vec.push(manager_info);
         }
 
@@ -445,11 +517,13 @@ impl UpdateDirCreator {
             let backend_info = tokio::fs::read_to_string(&backend_info_path)
                 .await
                 .into_error(UpdateError::FileReadingFailed)?;
-            let backend_info = serde_json::from_str(&backend_info)
-                .into_error(UpdateError::InvalidInput)?;
+            let backend_info =
+                serde_json::from_str(&backend_info).into_error(UpdateError::InvalidInput)?;
             info_vec.push(backend_info);
         }
 
-        Ok(SoftwareInfo { current_software: info_vec })
+        Ok(SoftwareInfo {
+            current_software: info_vec,
+        })
     }
 }
