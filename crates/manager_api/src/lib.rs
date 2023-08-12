@@ -15,11 +15,11 @@ pub use manager_api_client::apis::{
 use manager_api_client::{
     apis::manager_api::{
         get_encryption_key, post_request_build_software, post_request_software_update,
-        GetLatestSoftwareError,
+        GetLatestSoftwareError, get_system_info_all,
     },
     manual_additions::get_latest_software_fixed,
 };
-use manager_model::{BuildInfo, CommandOutput, DataEncryptionKey, SoftwareOptions, SystemInfo};
+use manager_model::{BuildInfo, CommandOutput, DataEncryptionKey, SoftwareOptions, SystemInfo, SystemInfoList};
 
 pub struct ManagerApi;
 
@@ -88,6 +88,35 @@ impl ManagerApi {
         };
 
         post_request_build_software(configuration, converted_options).await
+    }
+
+    pub async fn system_info_all(
+        configuration: &Configuration,
+    ) -> Result<SystemInfoList, Error<GetSystemInfoAllError>> {
+        let system_info =
+            get_system_info_all(configuration)
+                .await?;
+
+        let info_vec = system_info
+            .info
+            .into_iter()
+            .map(|info| {
+                let cmd_vec = info
+                    .info
+                    .into_iter()
+                    .map(|info| CommandOutput {
+                        name: info.name,
+                        output: info.output,
+                    })
+                    .collect::<Vec<CommandOutput>>();
+                SystemInfo {
+                    name: info.name,
+                    info: cmd_vec,
+                }
+            })
+            .collect::<Vec<SystemInfo>>();
+
+        Ok(SystemInfoList { info: info_vec })
     }
 
     pub async fn system_info(
