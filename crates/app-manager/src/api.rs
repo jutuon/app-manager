@@ -9,7 +9,7 @@ use utoipa::{Modify, OpenApi};
 
 use crate::{
     config::Config,
-    server::{client::{ApiClient, ApiManager}, build::{BuildManager, BuildManagerHandle}, update::UpdateManagerHandle
+    server::{client::{ApiManager}, build::{BuildManagerHandle}, update::UpdateManagerHandle
     },
 };
 

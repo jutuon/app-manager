@@ -2,12 +2,12 @@
 
 use std::{process::ExitStatus, sync::Arc, path::{PathBuf, Path}};
 
-use serde::{Serialize, Deserialize};
+
 use tokio::{task::JoinHandle, sync::mpsc, process::Command};
 use tracing::{info, warn};
-use url::Url;
 
-use crate::{config::{Config, file::SoftwareBuilderConfig, info::build_info}, utils::IntoReportExt};
+
+use crate::{config::{Config, file::SoftwareBuilderConfig}, utils::IntoReportExt};
 
 use manager_model::{DownloadType, SoftwareOptions, BuildInfo, MANAGER_REPOSITORY_NAME, BACKEND_REPOSITORY_NAME};
 

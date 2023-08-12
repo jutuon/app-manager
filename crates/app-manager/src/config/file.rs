@@ -1,7 +1,6 @@
 use std::{
     io::Write,
     net::SocketAddr,
-    num::{NonZeroU8},
     path::{Path, PathBuf},
 };
 
@@ -10,7 +9,7 @@ use manager_model::DataEncryptionKey;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{utils::IntoReportExt, api::{GetConfig}};
+use crate::{utils::IntoReportExt};
 
 use super::GetConfigError;
 
@@ -208,7 +207,7 @@ pub struct TimeValue {
 impl TryFrom<String> for TimeValue {
     type Error = String;
     fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
-        let mut iter = value.trim().split(':');
+        let iter = value.trim().split(':');
         let values: Vec<&str> = iter.collect();
         match values[..] {
             [hours, minutes] => {

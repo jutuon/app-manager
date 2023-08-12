@@ -3,23 +3,22 @@ pub mod private_routers;
 use std::sync::Arc;
 
 use axum::{
-    routing::{get, post},
-    Json, Router,
+    Router,
 };
 
 
-use utoipa::OpenApi;
+
 
 use crate::{
     api::{
-        self, ApiDoc, GetConfig, GetApiManager, GetBuildManager, GetUpdateManager,
+        GetConfig, GetApiManager, GetBuildManager, GetUpdateManager,
     },
     config::Config,
 };
 
 use self::private_routers::PrivateRoutes;
 
-use super::{client::{ApiManager, ApiClient}, build::BuildManagerHandle, update::{UpdateManagerHandle, self}};
+use super::{client::{ApiManager, ApiClient}, build::BuildManagerHandle, update::{UpdateManagerHandle}};
 
 #[derive(Clone)]
 pub struct AppState {

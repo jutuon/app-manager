@@ -10,7 +10,7 @@ use std::{
 };
 
 use error_stack::{IntoReport, Result, ResultExt};
-use reqwest::Url;
+
 use rustls_pemfile::{certs, rsa_private_keys};
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tracing::{info, log::warn};
@@ -123,10 +123,10 @@ impl Config {
 }
 
 pub fn get_config() -> Result<Config, GetConfigError> {
-    let args_config = args::get_config();
+    let _args_config = args::get_config();
 
     let current_dir = std::env::current_dir().into_error(GetConfigError::GetWorkingDir)?;
-    let mut file_config =
+    let file_config =
         file::ConfigFile::load(current_dir).change_context(GetConfigError::LoadFileError)?;
 
     let public_api_tls_config = match file_config.tls.clone() {

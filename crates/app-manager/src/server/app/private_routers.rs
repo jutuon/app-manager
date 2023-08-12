@@ -1,7 +1,7 @@
 
 use axum::{
     middleware,
-    routing::{get, patch, post, put}, Router,
+    routing::{get, post}, Router,
 };
 
 use crate::{

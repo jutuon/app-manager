@@ -20,7 +20,7 @@ pub static API_KEY_HEADER: header::HeaderName = header::HeaderName::from_static(
 pub async fn authenticate_with_api_key<T, S: GetConfig>(
     state: S,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    mut req: Request<T>,
+    req: Request<T>,
     next: Next<T>,
 ) -> Result<Response, StatusCode> {
     let header = req

@@ -3,14 +3,14 @@
 
 use std::{process::ExitStatus, sync::{Arc, atomic::Ordering}, path::{PathBuf, Path}};
 
-use serde::{Serialize, Deserialize};
+
 use tokio::{task::JoinHandle, sync::mpsc, process::Command};
 use tracing::{info, warn};
-use url::Url;
 
-use crate::{config::{Config, file::{SoftwareBuilderConfig, SoftwareUpdateProviderConfig}}, utils::IntoReportExt};
 
-use manager_model::{DownloadType, SoftwareOptions, BuildInfo, SoftwareInfo};
+use crate::{config::{Config, file::{SoftwareUpdateProviderConfig}}, utils::IntoReportExt};
+
+use manager_model::{SoftwareOptions, BuildInfo, SoftwareInfo};
 
 use super::{ServerQuitWatcher, client::{ApiClient, ApiManager}, build::BuildDirCreator, reboot::{REBOOT_ON_NEXT_CHECK, RebootManagerHandle}};
 

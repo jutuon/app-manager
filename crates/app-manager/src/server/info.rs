@@ -1,24 +1,24 @@
 //! Get system info
 
-use std::{process::ExitStatus, fmt::format};
+use std::{process::ExitStatus};
 
 use manager_model::{SystemInfo, CommandOutput, SystemInfoList};
 
 
-use std::{sync::{Arc, atomic::Ordering}, path::{PathBuf, Path}};
 
-use serde::{Serialize, Deserialize};
-use tokio::{task::JoinHandle, sync::mpsc, process::Command};
-use tracing::{info, warn};
-use url::Url;
 
-use crate::{config::{Config, file::{SoftwareBuilderConfig, SoftwareUpdateProviderConfig}}, utils::IntoReportExt};
 
-use manager_model::{DownloadType, SoftwareOptions, BuildInfo, SoftwareInfo};
+use tokio::{process::Command};
 
-use super::{ServerQuitWatcher, client::{ApiClient, ApiManager}, build::BuildDirCreator, reboot::{REBOOT_ON_NEXT_CHECK, RebootManagerHandle}};
 
-use error_stack::{Result, ResultExt};
+
+use crate::{config::{Config}, utils::IntoReportExt};
+
+
+
+use super::{client::{ApiManager}};
+
+use error_stack::{Result};
 
 
 #[derive(thiserror::Error, Debug)]
@@ -71,7 +71,7 @@ impl SystemInfoGetter {
                         },
                         Err(e) => {
                             tracing::error!("Failed to get system info from {}: {:?}", service.name, e);
-                            let error = e.to_string();
+                            let _error = e.to_string();
 
                         },
                     }

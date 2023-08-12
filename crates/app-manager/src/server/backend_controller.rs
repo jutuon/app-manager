@@ -1,17 +1,17 @@
 //! Start and stop backend
 
 
-use std::{process::ExitStatus, sync::Arc, path::{PathBuf, Path}};
+use std::{process::ExitStatus};
 
-use serde::{Serialize, Deserialize};
-use tokio::{task::JoinHandle, sync::mpsc, process::Command};
-use tracing::{info, warn};
-use url::Url;
 
-use crate::{config::{Config, file::SoftwareBuilderConfig}, utils::IntoReportExt};
-use manager_model::{DownloadType, SoftwareOptions, BuildInfo};
+use tokio::{process::Command};
 
-use super::ServerQuitWatcher;
+
+
+use crate::{config::{Config}, utils::IntoReportExt};
+
+
+
 
 use error_stack::Result;
 

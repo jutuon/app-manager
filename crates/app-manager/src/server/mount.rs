@@ -4,12 +4,12 @@
 
 use std::{sync::Arc, path::Path, process::{Stdio, ExitStatus}};
 
-use http::StatusCode;
+
 use manager_model::DataEncryptionKey;
-use tokio::{process::Command, io::{Stdin, AsyncWriteExt}};
+use tokio::{process::Command, io::{AsyncWriteExt}};
 
 use error_stack::{Result, ResultExt, IntoReport};
-use tracing::{info, log::warn};
+use tracing::{info};
 
 
 use crate::{config::{Config, file::EncryptionKeyProviderConfig}, api::GetApiManager, utils::IntoReportExt};
@@ -44,7 +44,7 @@ impl MountManager {
         }
     }
 
-    pub async fn mount_if_needed(&self, provider: &EncryptionKeyProviderConfig) -> Result<(), MountError> {
+    pub async fn mount_if_needed(&self, _provider: &EncryptionKeyProviderConfig) -> Result<(), MountError> {
         if Path::new(self.config.secure_storage_dir()).exists() {
             info!("Encrypted storage is already mounted");
             // Already mounted.
@@ -100,7 +100,7 @@ impl MountManager {
         info!("Unmounting encrypted data file");
 
         // Run command.
-        let mut c = Command::new("sudo")
+        let c = Command::new("sudo")
             .arg(self.config.script_locations().close_encryption())
             .status()
             .await

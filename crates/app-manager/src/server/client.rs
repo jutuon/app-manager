@@ -1,17 +1,17 @@
 
-use std::{net::SocketAddr, io::BufReader, collections::{VecDeque, HashMap}};
+use std::{collections::{HashMap}};
 
 use manager_api::{ManagerApi, Configuration, ApiKey};
-use reqwest::Certificate;
+
 use tracing::info;
-use tracing_subscriber::fmt::format;
-use url::Url;
 
-use crate::{config::{Config, file::SoftwareUpdateProviderConfig}, api::{self, }, utils::IntoReportExt};
 
-use manager_model::{SoftwareInfo, SoftwareOptions, BuildInfo, SystemInfo, CommandOutput, DownloadType, DataEncryptionKey};
 
-use error_stack::{Result, ResultExt, IntoReport};
+use crate::{config::{Config}, utils::IntoReportExt};
+
+use manager_model::{SoftwareOptions, BuildInfo, SystemInfo, DataEncryptionKey};
+
+use error_stack::{Result};
 
 
 #[derive(thiserror::Error, Debug)]

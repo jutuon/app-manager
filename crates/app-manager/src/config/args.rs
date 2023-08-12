@@ -1,10 +1,9 @@
 use std::{
-    convert::{TryFrom, TryInto},
-    path::PathBuf, process::exit,
+    process::exit,
 };
 
-use clap::{arg, command, value_parser, Command, PossibleValue};
-use reqwest::Url;
+use clap::{arg, command};
+
 
 
 // Config given as command line arguments

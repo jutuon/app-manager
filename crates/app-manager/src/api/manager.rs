@@ -1,6 +1,6 @@
-use std::{net::SocketAddr, vec};
+use std::{net::SocketAddr};
 
-use axum::{Json, TypedHeader, extract::{Path, ConnectInfo, Query}, Extension};
+use axum::{Json, extract::{Path, ConnectInfo, Query}};
 
 use futures::FutureExt;
 use hyper::StatusCode;
@@ -13,7 +13,7 @@ use super::{GetConfig, GetBuildManager, GetUpdateManager, GetApiManager};
 
 use tracing::{error, info};
 
-use super::{utils::ApiKeyHeader};
+
 
 use tokio_stream::StreamExt;
 
