@@ -6,14 +6,8 @@
 //! Prevents exposing api_client crate model types to server code.
 
 
-
-
 use manager_api_client::{apis::{manager_api::{get_encryption_key, post_request_build_software, GetLatestSoftwareError, post_request_software_update}}, manual_additions::get_latest_software_fixed};
 use manager_model::{SoftwareOptions, BuildInfo, SystemInfo, CommandOutput, DataEncryptionKey};
-
-
-
-
 
 pub use manager_api_client::apis::{Error, configuration::{ApiKey, Configuration}};
 pub use manager_api_client::apis::manager_api::{

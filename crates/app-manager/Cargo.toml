@@ -8,7 +8,6 @@ edition = "2021"
 [dependencies]
 clap = { version = "3.2.14", features = ["cargo"] }
 toml = "0.7.2"
-uuid = { version = "1.1.2", features = ["v4", "serde"] }
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -16,19 +15,15 @@ serde_json = "1.0"
 futures = "0.3.28"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1.10", features = ["sync"] }
-tokio-util = { version = "0.7.7", features = ["io"]}
 hyper = { version = "0.14", features = ["full"] }
 axum = { version = "0.6", features = ["headers", "ws"] }
 tower = "0.4.13"
 tower-http = { version = "0.4.0", features = ["trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-mime = "0.3"
 headers = "0.3.8"
 reqwest = { version = "0.11", features = ["json"] }
 url = { version = "2.3.1", features = ["serde"] }
-bytes = "1.4.0"
-http = "0.2.9"
 
 # Server TLS
 tokio-rustls = "0.24.0"
@@ -39,8 +34,6 @@ utoipa-swagger-ui = { version = "3.0.1", features = ["axum"] }
 
 thiserror = "1.0.37"
 error-stack = "0.2.3"
-
-async-trait = "0.1.66"
 
 time = { version = "0.3.20" }
 
