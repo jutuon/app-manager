@@ -3,25 +3,23 @@
 use std::{
     path::{Path, PathBuf},
     process::ExitStatus,
-    sync::{Arc, atomic::Ordering},
+    sync::{atomic::Ordering, Arc},
 };
 
 use error_stack::{Result, ResultExt};
+use manager_model::{BuildInfo, SoftwareInfo, SoftwareOptions};
 use tokio::{process::Command, sync::mpsc, task::JoinHandle};
 use tracing::{info, warn};
-
-use manager_model::{BuildInfo, SoftwareInfo, SoftwareOptions};
-
-use crate::{
-    config::{Config, file::SoftwareUpdateProviderConfig},
-    utils::IntoReportExt,
-};
 
 use super::{
     build::BuildDirCreator,
     client::{ApiClient, ApiManager},
-    reboot::{REBOOT_ON_NEXT_CHECK, RebootManagerHandle},
+    reboot::{RebootManagerHandle, REBOOT_ON_NEXT_CHECK},
     ServerQuitWatcher,
+};
+use crate::{
+    config::{file::SoftwareUpdateProviderConfig, Config},
+    utils::IntoReportExt,
 };
 
 #[derive(thiserror::Error, Debug)]

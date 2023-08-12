@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
 use error_stack::Result;
-use tracing::info;
-
 use manager_api::{ApiKey, Configuration, ManagerApi};
 use manager_model::{BuildInfo, DataEncryptionKey, SoftwareOptions, SystemInfo};
+use tracing::info;
 
 use crate::{config::Config, utils::IntoReportExt};
 

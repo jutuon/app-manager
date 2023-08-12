@@ -15,8 +15,7 @@ use tokio::{
     sync::{broadcast, mpsc},
     task::JoinHandle,
 };
-use tokio_rustls::rustls::ServerConfig;
-use tokio_rustls::TlsAcceptor;
+use tokio_rustls::{rustls::ServerConfig, TlsAcceptor};
 use tower::MakeService;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info, log::warn};
@@ -26,8 +25,8 @@ use utoipa_swagger_ui::SwaggerUi;
 use crate::{
     api::{ApiDoc, GetBuildManager, GetUpdateManager},
     config::{
-        Config,
         info::{BUILD_INFO_CARGO_PKG_VERSION, BUILD_INFO_GIT_DESCRIBE},
+        Config,
     },
     server::{
         app::App, backend_controller::BackendController, build::BuildManager, client::ApiClient,

@@ -4,6 +4,14 @@
 //! This crate provides a wrapper for the internal API of the server.
 //! Prevents exposing api_client crate model types to server code.
 
+pub use manager_api_client::apis::{
+    configuration::{ApiKey, Configuration},
+    manager_api::{
+        GetEncryptionKeyError, GetSoftwareInfoError, GetSystemInfoAllError, GetSystemInfoError,
+        PostRequestBuildSoftwareError, PostRequestSoftwareUpdateError,
+    },
+    Error,
+};
 use manager_api_client::{
     apis::manager_api::{
         get_encryption_key, post_request_build_software, post_request_software_update,
@@ -12,15 +20,6 @@ use manager_api_client::{
     manual_additions::get_latest_software_fixed,
 };
 use manager_model::{BuildInfo, CommandOutput, DataEncryptionKey, SoftwareOptions, SystemInfo};
-
-pub use manager_api_client::apis::manager_api::{
-    GetEncryptionKeyError, GetSoftwareInfoError, GetSystemInfoAllError, GetSystemInfoError,
-    PostRequestBuildSoftwareError, PostRequestSoftwareUpdateError,
-};
-pub use manager_api_client::apis::{
-    configuration::{ApiKey, Configuration},
-    Error,
-};
 
 pub struct ManagerApi;
 

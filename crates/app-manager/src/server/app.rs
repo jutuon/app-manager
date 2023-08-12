@@ -2,18 +2,16 @@ use std::sync::Arc;
 
 use axum::Router;
 
-use crate::{
-    api::{GetApiManager, GetBuildManager, GetConfig, GetUpdateManager},
-    config::Config,
-};
-
+use self::private_routers::PrivateRoutes;
 use super::{
     build::BuildManagerHandle,
     client::{ApiClient, ApiManager},
     update::UpdateManagerHandle,
 };
-
-use self::private_routers::PrivateRoutes;
+use crate::{
+    api::{GetApiManager, GetBuildManager, GetConfig, GetUpdateManager},
+    config::Config,
+};
 
 pub mod private_routers;
 

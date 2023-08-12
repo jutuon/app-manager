@@ -10,12 +10,11 @@ use rustls_pemfile::{certs, rsa_private_keys};
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tracing::{info, log::warn};
 
-use crate::utils::IntoReportExt;
-
 use self::file::{
     ConfigFile, EncryptionKeyProviderConfig, RebootIfNeededConfig, ServerEncryptionKey,
     SocketConfig, SoftwareBuilderConfig, SoftwareUpdateProviderConfig, SystemInfoConfig,
 };
+use crate::utils::IntoReportExt;
 
 pub mod args;
 pub mod file;

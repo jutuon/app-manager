@@ -8,18 +8,16 @@ use std::{
 };
 
 use error_stack::{IntoReport, Result, ResultExt};
+use manager_model::DataEncryptionKey;
 use tokio::{io::AsyncWriteExt, process::Command};
 use tracing::info;
 
-use manager_model::DataEncryptionKey;
-
+use super::app::AppState;
 use crate::{
     api::GetApiManager,
-    config::{Config, file::EncryptionKeyProviderConfig},
+    config::{file::EncryptionKeyProviderConfig, Config},
     utils::IntoReportExt,
 };
-
-use super::app::AppState;
 
 #[derive(thiserror::Error, Debug)]
 pub enum MountError {

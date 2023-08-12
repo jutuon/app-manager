@@ -4,6 +4,6 @@ CARGO_CRATE_ARGS = 	-p manager_api \
 					-p app-manager
 
 fmt:
-	cargo fmt $(CARGO_CRATE_ARGS)
+	cargo +nightly fmt $(CARGO_CRATE_ARGS)
 fix:
 	cargo fix ${CARGO_CRATE_ARGS}

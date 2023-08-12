@@ -5,14 +5,12 @@ use std::{
 };
 
 use error_stack::{Report, Result, ResultExt};
+use manager_model::DataEncryptionKey;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use manager_model::DataEncryptionKey;
-
-use crate::utils::IntoReportExt;
-
 use super::GetConfigError;
+use crate::utils::IntoReportExt;
 
 pub const CONFIG_FILE_NAME: &str = "manager_config.toml";
 

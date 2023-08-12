@@ -1,15 +1,13 @@
 //! HTTP API types and request handlers for all servers.
 
-use utoipa::OpenApi;
-
 use manager_model as model;
+pub use utils::SecurityApiTokenDefault;
+use utoipa::OpenApi;
 
 use crate::{
     config::Config,
     server::{build::BuildManagerHandle, client::ApiManager, update::UpdateManagerHandle},
 };
-
-pub use utils::SecurityApiTokenDefault;
 
 // Routes
 pub mod manager;

@@ -7,19 +7,17 @@ use std::{
 };
 
 use error_stack::Result;
+use manager_model::{
+    BuildInfo, DownloadType, SoftwareOptions, BACKEND_REPOSITORY_NAME, MANAGER_REPOSITORY_NAME,
+};
 use tokio::{process::Command, sync::mpsc, task::JoinHandle};
 use tracing::{info, warn};
 
-use manager_model::{
-    BACKEND_REPOSITORY_NAME, BuildInfo, DownloadType, MANAGER_REPOSITORY_NAME, SoftwareOptions,
-};
-
+use super::ServerQuitWatcher;
 use crate::{
-    config::{Config, file::SoftwareBuilderConfig},
+    config::{file::SoftwareBuilderConfig, Config},
     utils::IntoReportExt,
 };
-
-use super::ServerQuitWatcher;
 
 pub const GPG_KEY_NAME: &str = "app-manager-software-builder";
 

@@ -1,12 +1,11 @@
 use axum::{
     middleware,
-    Router,
     routing::{get, post},
+    Router,
 };
 
-use crate::api::{self};
-
 use super::AppState;
+use crate::api::{self};
 
 /// Private routes only accessible with correct API key.
 pub struct PrivateRoutes {

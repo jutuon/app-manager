@@ -1,17 +1,18 @@
 use std::net::SocketAddr;
 
-use axum::{extract::{ConnectInfo, Path, Query}, Json};
+use axum::{
+    extract::{ConnectInfo, Path, Query},
+    Json,
+};
 use hyper::StatusCode;
-use tracing::{error, info};
-
 use manager_model::{
     DataEncryptionKey, DownloadType, DownloadTypeQueryParam, RebootQueryParam, ServerNameText,
     SoftwareInfo, SoftwareOptions, SoftwareOptionsQueryParam, SystemInfo, SystemInfoList,
 };
-
-use crate::server::{build::BuildDirCreator, info::SystemInfoGetter, update::UpdateDirCreator};
+use tracing::{error, info};
 
 use super::{GetApiManager, GetBuildManager, GetConfig, GetUpdateManager};
+use crate::server::{build::BuildDirCreator, info::SystemInfoGetter, update::UpdateDirCreator};
 
 pub const PATH_GET_ENCRYPTION_KEY: &str = "/manager_api/encryption_key/:server";
 
