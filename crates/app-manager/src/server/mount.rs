@@ -10,12 +10,12 @@ use std::{
 use error_stack::{IntoReport, Result, ResultExt};
 use manager_model::DataEncryptionKey;
 use tokio::{io::AsyncWriteExt, process::Command};
-use tracing::info;
+use tracing::{info, error};
 
 use super::app::AppState;
 use crate::{
     api::GetApiManager,
-    config::{file::EncryptionKeyProviderConfig, Config}, utils::ContextExt,
+    config::{file::SecureStorageConfig, Config}, utils::ContextExt,
 
 };
 
@@ -46,11 +46,10 @@ impl MountManager {
 
     pub async fn mount_if_needed(
         &self,
-        _provider: &EncryptionKeyProviderConfig,
+        storage_config: &SecureStorageConfig,
     ) -> Result<(), MountError> {
-        if Path::new(self.config.secure_storage_dir()).exists() {
-            info!("Encrypted storage is already mounted");
-            // Already mounted.
+        if storage_config.availability_check_path.exists() {
+            info!("Secure storage is already mounted");
             return Ok(());
         }
 
@@ -63,9 +62,8 @@ impl MountManager {
 
         self.change_password_if_needed(key.clone()).await?;
 
-        info!("Opening encrypted data file");
+        info!("Mounting secure storage");
 
-        // Open encryption.
         let mut c = Command::new("sudo")
             .arg(self.config.script_locations().open_encryption())
             .stdin(Stdio::piped())
@@ -86,23 +84,21 @@ impl MountManager {
         let status = c.wait().await.change_context(MountError::ProcessStartFailed)?;
 
         if status.success() {
-            info!("Opening was successfull.");
+            info!("Mounting was successfull.");
+            Ok(())
         } else {
-            tracing::error!("Opening failed.");
-            return Err(MountError::CommandFailed(status).report());
+            error!("Mounting failed.");
+            Err(MountError::CommandFailed(status).report())
         }
-
-        Ok(())
     }
 
-    pub async fn unmount_if_needed(&self) -> Result<(), MountError> {
-        if !Path::new(self.config.secure_storage_dir()).exists() {
-            info!("Encrypted storage is already unmounted");
-            // Already unmounted.
+    pub async fn unmount_if_needed(&self, storage_config: &SecureStorageConfig) -> Result<(), MountError> {
+        if !storage_config.availability_check_path.exists() {
+            info!("Secure storage is already unmounted");
             return Ok(());
         }
 
-        info!("Unmounting encrypted data file");
+        info!("Unmounting secure storage");
 
         // Run command.
         let c = Command::new("sudo")
@@ -112,13 +108,12 @@ impl MountManager {
             .change_context(MountError::ProcessStartFailed)?;
 
         if c.success() {
-            info!("Closing was successfull.");
+            info!("Unmounting was successfull.");
+            Ok(())
         } else {
-            tracing::error!("Closing failed.");
-            return Err(MountError::CommandFailed(c).report());
+            error!("Unmounting failed.");
+            Err(MountError::CommandFailed(c).report())
         }
-
-        Ok(())
     }
 
     async fn change_password_if_needed(&self, key: DataEncryptionKey) -> Result<(), MountError> {
@@ -156,7 +151,7 @@ impl MountManager {
                 info!("Password change was successfull.");
                 Ok(())
             } else {
-                tracing::error!("Password change failed.");
+                error!("Password change failed.");
                 Err(MountError::CommandFailed(status).report())
             }
         } else {

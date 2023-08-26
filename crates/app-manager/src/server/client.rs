@@ -52,7 +52,7 @@ impl ApiClient {
 
         let client = client.build().change_context(ApiError::ClientBuildFailed)?;
 
-        let encryption_key_provider = config.encryption_key_provider().map(|url| {
+        let encryption_key_provider = config.secure_storage_config().map(|url| {
             let url = url
                 .manager_base_url
                 .as_str()
@@ -154,12 +154,12 @@ impl<'a> ApiManager<'a> {
     pub async fn get_encryption_key(&self) -> Result<DataEncryptionKey, ApiError> {
         let provider = self
             .config
-            .encryption_key_provider()
+            .secure_storage_config()
             .ok_or(ApiError::MissingConfiguration)?;
 
         ManagerApi::get_encryption_key(
             self.api_client.encryption_key_provider_config()?,
-            &provider.key_name,
+            &provider.encryption_key_name,
         )
         .await
         .change_context(ApiError::ApiRequest)

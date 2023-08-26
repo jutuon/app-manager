@@ -467,7 +467,7 @@ pub struct UpdateDirCreator;
 
 impl UpdateDirCreator {
     pub fn create_update_dir_if_needed(config: &Config) -> PathBuf {
-        let build_dir = config.secure_storage_dir().join("update");
+        let build_dir = config.storage_dir().join("update");
 
         if !Path::new(&build_dir).exists() {
             info!("Creating update directory");

@@ -642,7 +642,7 @@ pub struct BuildDirCreator;
 
 impl BuildDirCreator {
     pub fn create_build_dir_if_needed(config: &Config) -> PathBuf {
-        let build_dir = config.secure_storage_dir().join("build");
+        let build_dir = config.storage_dir().join("build");
 
         if !Path::new(&build_dir).exists() {
             info!("Creating build directory");

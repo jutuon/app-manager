@@ -11,7 +11,7 @@ use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tracing::{info, log::warn};
 
 use self::file::{
-    ConfigFile, EncryptionKeyProviderConfig, RebootIfNeededConfig, ServerEncryptionKey,
+    ConfigFile, SecureStorageConfig, RebootIfNeededConfig, ServerEncryptionKey,
     SocketConfig, SoftwareBuilderConfig, SoftwareUpdateProviderConfig, SystemInfoConfig,
 };
 
@@ -75,8 +75,8 @@ impl Config {
             .unwrap_or(&[])
     }
 
-    pub fn encryption_key_provider(&self) -> Option<&EncryptionKeyProviderConfig> {
-        self.file.encryption_key_provider.as_ref()
+    pub fn secure_storage_config(&self) -> Option<&SecureStorageConfig> {
+        self.file.secure_storage.as_ref()
     }
 
     pub fn software_update_provider(&self) -> Option<&SoftwareUpdateProviderConfig> {
@@ -107,8 +107,9 @@ impl Config {
         self.file.system_info.as_ref()
     }
 
-    pub fn secure_storage_dir(&self) -> &Path {
-        &self.file.environment.secure_storage_dir
+    /// Directory for build and update files
+    pub fn storage_dir(&self) -> &Path {
+        &self.file.storage_dir
     }
 
     pub fn reboot_if_needed(&self) -> &Option<RebootIfNeededConfig> {
@@ -142,7 +143,7 @@ pub fn get_config() -> Result<Config, GetConfigError> {
     }
 
     let script_locations = check_script_locations(
-        &file_config.environment.scripts_dir,
+        &file_config.scripts_dir,
         file_config.debug.unwrap_or_default(),
     )?;
 

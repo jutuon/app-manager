@@ -18,17 +18,16 @@ pub const DEFAULT_CONFIG_FILE_TEXT: &str = r#"
 
 # Required
 # api_key = "password"
+# scripts_dir = "/app-server-tools/manager-tools"
+# storage_dir = "/app-secure-storage/app/app-manager-storage"
 
 [socket]
 public_api = "127.0.0.1:5000"
 
-[environment]
-secure_storage_dir = "/app-secure-storage/app"
-scripts_dir = "/app-server-tools/manager-tools"
-
-# [encryption_key_provider]
+# [secure_storage]
 # manager_base_url = "http://127.0.0.1:5000"
-# key_name = "test-server"
+# encryption_key_name = "test-server"
+# availability_check_path = "/app-secure-storage/app"
 
 # [[server_encryption_keys]]
 # name = "test-server"
@@ -84,14 +83,19 @@ pub struct ConfigFile {
     ///
     /// If the key is wrong the API access is denied untill manager is restarted.
     pub api_key: String,
+    /// Directory for build and update files.
+    pub storage_dir: PathBuf,
+    pub scripts_dir: PathBuf,
+    pub socket: SocketConfig,
+
+    // Optional configs
+
     pub server_encryption_keys: Option<Vec<ServerEncryptionKey>>,
-    pub encryption_key_provider: Option<EncryptionKeyProviderConfig>,
+    pub secure_storage: Option<SecureStorageConfig>,
     pub reboot_if_needed: Option<RebootIfNeededConfig>,
     pub software_update_provider: Option<SoftwareUpdateProviderConfig>,
     pub software_builder: Option<SoftwareBuilderConfig>,
     pub system_info: Option<SystemInfoConfig>,
-    pub socket: SocketConfig,
-    pub environment: EnvironmentConfig,
     /// TLS is required if debug setting is false.
     pub tls: Option<TlsConfig>,
 }
@@ -158,15 +162,22 @@ impl ServerEncryptionKey {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct EncryptionKeyProviderConfig {
-    /// Name of key which will be requested.
-    pub key_name: String,
+pub struct SecureStorageConfig {
+    /// Url to app-manager instance used for requesting an encryption
+    /// key for secure storage.
     pub manager_base_url: Url,
+    /// Name of key which will be requested from the manager
+    /// instance.
+    pub encryption_key_name: String,
+    /// Path to file or directory which is used to
+    /// check if the secure storage is mounted or not.
+    pub availability_check_path: PathBuf,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SoftwareUpdateProviderConfig {
-    /// Manager instance URL which is used to check if new software is available.
+    /// Manager instance URL which is used to
+    /// check if new software is available.
     pub manager_base_url: Url,
     /// GPG public key
     pub binary_signing_public_key: PathBuf,
@@ -221,12 +232,6 @@ impl TryFrom<String> for TimeValue {
             _ => Err(format!("Unknown values: {:?}", values)),
         }
     }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct EnvironmentConfig {
-    pub secure_storage_dir: PathBuf,
-    pub scripts_dir: PathBuf,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

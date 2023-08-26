@@ -118,7 +118,7 @@ impl AppServer {
 
         let mount_manager = MountManager::new(self.config.clone(), app.state());
 
-        if let Some(encryption_key_provider) = self.config.encryption_key_provider() {
+        if let Some(encryption_key_provider) = self.config.secure_storage_config() {
             loop {
                 match mount_manager.mount_if_needed(encryption_key_provider).await {
                     Ok(()) => {
@@ -224,13 +224,13 @@ impl AppServer {
 
         drop(app);
 
-        if self.config.encryption_key_provider().is_some() {
-            match mount_manager.unmount_if_needed().await {
+        if let Some(config) = self.config.secure_storage_config() {
+            match mount_manager.unmount_if_needed(config).await {
                 Ok(()) => {
-                    info!("Encrypted storage is now unmounted");
+                    info!("Secure storage is now unmounted");
                 }
                 Err(e) => {
-                    warn!("Failed to unmount encrypted storage. Error: {:?}", e);
+                    warn!("Failed to unmount secure storage. Error: {:?}", e);
                 }
             }
         }
