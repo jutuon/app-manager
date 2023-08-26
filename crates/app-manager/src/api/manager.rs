@@ -4,14 +4,13 @@ use axum::{
     extract::{ConnectInfo, Path, Query},
     Json,
 };
-use hyper::StatusCode;
 use manager_model::{
     DataEncryptionKey, DownloadType, DownloadTypeQueryParam, RebootQueryParam, ServerNameText,
-    SoftwareInfo, SoftwareOptions, SoftwareOptionsQueryParam, SystemInfo, SystemInfoList,
+    SoftwareInfo, SoftwareOptions, SoftwareOptionsQueryParam, SystemInfo, SystemInfoList, ResetDataQueryParam,
 };
 use tracing::{error, info};
 
-use super::{GetApiManager, GetBuildManager, GetConfig, GetUpdateManager};
+use super::{GetApiManager, GetBuildManager, GetConfig, GetUpdateManager, utils::StatusCode};
 use crate::server::{build::BuildDirCreator, info::SystemInfoGetter, update::UpdateDirCreator};
 
 pub const PATH_GET_ENCRYPTION_KEY: &str = "/manager_api/encryption_key/:server";
@@ -38,10 +37,7 @@ pub async fn get_encryption_key<S: GetConfig>(
         .iter()
         .find(|s| s.name == server.server)
     {
-        let key = s.read_encryption_key().await.map_err(|e| {
-            error!("{e:?}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+        let key = s.read_encryption_key().await?;
         info!("Sending encryption key {} to {}", server.server, client);
         Ok(key.into())
     } else {
@@ -76,16 +72,13 @@ pub async fn get_latest_software<S: GetConfig + GetApiManager>(
             "Get latest software request received. Sending {:?} {:?} to {}",
             software.software_options, download.download_type, client,
         );
-        BuildDirCreator::get_data(
+        let data = BuildDirCreator::get_data(
             state.config(),
             software.software_options,
             download.download_type,
         )
-        .await
-        .map_err(|e| {
-            error!("{e:?}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })
+        .await?;
+        Ok(data)
     } else if state.config().software_update_provider().is_some() {
         info!(
             "Get latest software request received. Forwarding the request to the build server. Sending {:?} {:?} to {}",
@@ -93,24 +86,17 @@ pub async fn get_latest_software<S: GetConfig + GetApiManager>(
             download.download_type,
             client,
         );
-        match download.download_type {
+        let data = match download.download_type {
             DownloadType::Info => state
                 .api_manager()
                 .get_latest_build_info_raw(software.software_options)
-                .await
-                .map_err(|e| {
-                    error!("{e:?}");
-                    StatusCode::INTERNAL_SERVER_ERROR
-                }),
+                .await?,
             DownloadType::EncryptedBinary => state
                 .api_manager()
                 .get_latest_encrypted_software_binary(software.software_options)
-                .await
-                .map_err(|e| {
-                    error!("{e:?}");
-                    StatusCode::INTERNAL_SERVER_ERROR
-                }),
-        }
+                .await?,
+        };
+        Ok(data)
     } else {
         Err(StatusCode::INTERNAL_SERVER_ERROR)
     }
@@ -142,11 +128,8 @@ pub async fn post_request_build_software<S: GetConfig + GetBuildManager + GetApi
         state
             .build_manager()
             .send_build_request(software.software_options)
-            .await
-            .map_err(|e| {
-                error!("{e:?}");
-                StatusCode::INTERNAL_SERVER_ERROR
-            })
+            .await?;
+        Ok(())
     } else if state.config().software_update_provider().is_some() {
         info!(
             "Building request from {} reveived. Forwarding the request to the build server.",
@@ -155,11 +138,8 @@ pub async fn post_request_build_software<S: GetConfig + GetBuildManager + GetApi
         state
             .api_manager()
             .request_build_software_from_build_server(software.software_options)
-            .await
-            .map_err(|e| {
-                error!("{e:?}");
-                StatusCode::INTERNAL_SERVER_ERROR
-            })
+            .await?;
+        Ok(())
     } else {
         Err(StatusCode::INTERNAL_SERVER_ERROR)
     }
@@ -171,10 +151,15 @@ pub const PATH_POST_RQUEST_SOFTWARE_UPDATE: &str = "/manager_api/request_softwar
 ///
 /// Manager will update the requested software and reboot the computer as soon
 /// as possible if specified.
+///
+/// Software's current data storage can be resetted. This will remove or move
+/// the data in the data storage. If this does not have effect the software does
+/// not support reset_data query parameter or resetting the data storage has been
+/// disabled from app-manager config file.
 #[utoipa::path(
     post,
     path = "/manager_api/request_software_update",
-    params(SoftwareOptionsQueryParam, RebootQueryParam),
+    params(SoftwareOptionsQueryParam, RebootQueryParam, ResetDataQueryParam),
     responses(
         (status = 200, description = "Request received"),
         (status = 500, description = "Internal server error."),
@@ -184,36 +169,19 @@ pub const PATH_POST_RQUEST_SOFTWARE_UPDATE: &str = "/manager_api/request_softwar
 pub async fn post_request_software_update<S: GetConfig + GetUpdateManager>(
     Query(software): Query<SoftwareOptionsQueryParam>,
     Query(reboot): Query<RebootQueryParam>,
+    Query(reset_data): Query<ResetDataQueryParam>,
     ConnectInfo(client): ConnectInfo<SocketAddr>,
     state: S,
 ) -> Result<(), StatusCode> {
     info!(
-        "Update software request received from {}. Software {:?} and reboot {:?}",
-        client, software.software_options, reboot.reboot,
+        "Update software request received from {}. Software {:?}, reboot {:?}, reset_data {:?}",
+        client, software.software_options, reboot.reboot, reset_data.reset_data,
     );
 
-    match software.software_options {
-        SoftwareOptions::Manager => {
-            state
-                .update_manager()
-                .send_update_manager_request(reboot.reboot)
-                .await
-                .map_err(|e| {
-                    error!("{e:?}");
-                    StatusCode::INTERNAL_SERVER_ERROR
-                })?;
-        }
-        SoftwareOptions::Backend => {
-            state
-                .update_manager()
-                .send_update_backend_request(reboot.reboot)
-                .await
-                .map_err(|e| {
-                    error!("{e:?}");
-                    StatusCode::INTERNAL_SERVER_ERROR
-                })?;
-        }
-    }
+    state
+        .update_manager()
+        .send_update_request(software.software_options, reboot.reboot, reset_data)
+        .await?;
 
     Ok(())
 }
@@ -236,13 +204,8 @@ pub async fn get_software_info<S: GetConfig>(
 ) -> Result<Json<SoftwareInfo>, StatusCode> {
     info!("Get current software info received from {}.", client,);
 
-    let info = UpdateDirCreator::current_software(state.config())
-        .await
-        .map_err(|e| {
-            error!("{e:?}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
-
+    let info =
+        UpdateDirCreator::current_software(state.config()).await?;
     Ok(info.into())
 }
 
@@ -266,13 +229,7 @@ pub async fn get_system_info<S: GetConfig>(
 ) -> Result<Json<SystemInfo>, StatusCode> {
     info!("Get current system info received from {}.", client,);
 
-    let info = SystemInfoGetter::system_info(state.config())
-        .await
-        .map_err(|e| {
-            error!("{e:?}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
-
+    let info = SystemInfoGetter::system_info(state.config()).await?;
     Ok(info.into())
 }
 
@@ -297,12 +254,9 @@ pub async fn get_system_info_all<S: GetConfig + GetApiManager>(
 ) -> Result<Json<SystemInfoList>, StatusCode> {
     info!("Get all system infos received from {}.", client,);
 
-    let info = SystemInfoGetter::system_info_all(state.config(), &state.api_manager())
-        .await
-        .map_err(|e| {
-            error!("{e:?}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
-
+    let info = SystemInfoGetter::system_info_all(
+        state.config(),
+        &state.api_manager()
+    ).await?;
     Ok(info.into())
 }

@@ -7,7 +7,7 @@ use std::{
 };
 
 use error_stack::{Result, ResultExt};
-use manager_model::{BuildInfo, SoftwareInfo, SoftwareOptions};
+use manager_model::{BuildInfo, SoftwareInfo, SoftwareOptions, ResetDataQueryParam};
 use tokio::{process::Command, sync::mpsc, task::JoinHandle};
 use tracing::{info, warn};
 
@@ -18,7 +18,7 @@ use super::{
     ServerQuitWatcher,
 };
 use crate::{
-    config::{file::SoftwareUpdateProviderConfig, Config},
+    config::{file::SoftwareUpdateProviderConfig, Config}, utils::ContextExt,
 
 };
 
@@ -74,6 +74,12 @@ pub enum UpdateError {
 
     #[error("Reboot failed")]
     RebootFailed,
+
+    #[error("Reset data directory was not directory or does not exist")]
+    ResetDataDirectoryWasNotDirectory,
+
+    #[error("Reset data directory missing file name")]
+    ResetDataDirectoryNoFileName,
 }
 
 #[derive(Debug)]
@@ -98,6 +104,7 @@ impl UpdateManagerQuitHandle {
 pub enum UpdateManagerMessage {
     UpdateSoftware {
         force_reboot: bool,
+        reset_data: ResetDataQueryParam,
         software: SoftwareOptions,
     },
 }
@@ -108,22 +115,12 @@ pub struct UpdateManagerHandle {
 }
 
 impl UpdateManagerHandle {
-    pub async fn send_update_manager_request(&self, force_reboot: bool) -> Result<(), UpdateError> {
+    pub async fn send_update_request(&self, software: SoftwareOptions, force_reboot: bool, reset_data: ResetDataQueryParam) -> Result<(), UpdateError> {
         self.sender
             .try_send(UpdateManagerMessage::UpdateSoftware {
                 force_reboot,
-                software: SoftwareOptions::Manager,
-            })
-            .change_context(UpdateError::UpdateManagerNotAvailable)?;
-
-        Ok(())
-    }
-
-    pub async fn send_update_backend_request(&self, force_reboot: bool) -> Result<(), UpdateError> {
-        self.sender
-            .try_send(UpdateManagerMessage::UpdateSoftware {
-                force_reboot,
-                software: SoftwareOptions::Backend,
+                reset_data,
+                software,
             })
             .change_context(UpdateError::UpdateManagerNotAvailable)?;
 
@@ -192,8 +189,9 @@ impl UpdateManager {
         match message {
             UpdateManagerMessage::UpdateSoftware {
                 force_reboot,
+                reset_data,
                 software,
-            } => match self.update_software(force_reboot, software).await {
+            } => match self.update_software(force_reboot, reset_data, software).await {
                 Ok(()) => {
                     info!("Software update finished");
                 }
@@ -298,6 +296,7 @@ impl UpdateManager {
         &self,
         latest_version: &BuildInfo,
         force_reboot: bool,
+        reset_data: ResetDataQueryParam,
         software: SoftwareOptions,
     ) -> Result<(), UpdateError> {
         let update_dir = UpdateDirCreator::create_update_dir_if_needed(&self.config);
@@ -325,6 +324,10 @@ impl UpdateManager {
         .await
         .change_context(UpdateError::FileWritingFailed)?;
 
+        if reset_data.reset_data {
+            self.reset_data(software).await?;
+        }
+
         REBOOT_ON_NEXT_CHECK.store(true, Ordering::Relaxed);
 
         if force_reboot {
@@ -343,6 +346,7 @@ impl UpdateManager {
     pub async fn update_software(
         &self,
         force_reboot: bool,
+        reset_data: ResetDataQueryParam,
         software: SoftwareOptions,
     ) -> Result<(), UpdateError> {
         let current_version = self.read_latest_build_info(software).await?;
@@ -363,7 +367,7 @@ impl UpdateManager {
         let latest_installed_version = self.read_latest_installed_build_info(software).await?;
         if latest_version != latest_installed_version {
             info!("Installing software.\n{:#?}", latest_version);
-            self.install_latest_software(&latest_version, force_reboot, software)
+            self.install_latest_software(&latest_version, force_reboot, reset_data, software)
                 .await?;
             info!("Software installation completed.");
         } else {
@@ -398,8 +402,8 @@ impl UpdateManager {
             .await
             .change_context(UpdateError::ProcessWaitFailed)?;
         if !status.success() {
-            tracing::error!("Decrypting binary failed");
-            return Err(UpdateError::CommandFailed(status).into());
+            return Err(UpdateError::CommandFailed(status))
+                .attach_printable("Decrypting binary failed");
         }
 
         Ok(())
@@ -415,8 +419,8 @@ impl UpdateManager {
             .await
             .change_context(UpdateError::ProcessWaitFailed)?;
         if !status.success() {
-            tracing::error!("Decrypting binary failed");
-            return Err(UpdateError::CommandFailed(status).into());
+            return Err(UpdateError::CommandFailed(status))
+                .attach_printable("Decrypting binary failed");
         }
 
         Ok(())
@@ -449,9 +453,59 @@ impl UpdateManager {
             .await
             .change_context(UpdateError::ProcessWaitFailed)?;
         if !status.success() {
-            tracing::error!("Changing binary permissions failed");
-            return Err(UpdateError::CommandFailed(status).into());
+            return Err(UpdateError::CommandFailed(status))
+                .attach_printable("Changing binary permissions failed");
         }
+
+        Ok(())
+    }
+
+    pub async fn reset_data(&self, software: SoftwareOptions) -> Result<(), UpdateError> {
+        if software != SoftwareOptions::Backend {
+            return Ok(());
+        }
+
+        let backend_reset_data_dir = match &self.updater_config()?.backend_data_reset_dir {
+            Some(dir) => dir,
+            None => return Ok(()),
+        };
+
+        if !backend_reset_data_dir.is_dir() {
+            return Err(UpdateError::ResetDataDirectoryWasNotDirectory)
+                .attach_printable(backend_reset_data_dir.display().to_string());
+        }
+
+        let mut old_dir_name = backend_reset_data_dir
+            .file_name()
+            .ok_or(UpdateError::ResetDataDirectoryNoFileName.report())?
+            .to_string_lossy()
+            .to_string();
+        old_dir_name.push_str("-old");
+        let old_data_dir = backend_reset_data_dir.with_file_name(old_dir_name);
+        if old_data_dir.is_dir() {
+            info!(
+                "Data reset was requested. Removing existing old data directory {}",
+                old_data_dir.display()
+            );
+            tokio::fs::remove_dir_all(&old_data_dir)
+                .await
+                .change_context(UpdateError::FileRemovingFailed)
+                .attach_printable(old_data_dir.display().to_string())?;
+        }
+
+        info!(
+            "Data reset was requested. Moving {} to {}",
+            backend_reset_data_dir.display(),
+            old_data_dir.display()
+        );
+        tokio::fs::rename(&backend_reset_data_dir, &old_data_dir)
+            .await
+            .change_context(UpdateError::FileMovingFailed)
+            .attach_printable(format!(
+                "{} -> {}",
+                backend_reset_data_dir.display(),
+                old_data_dir.display()
+            ))?;
 
         Ok(())
     }

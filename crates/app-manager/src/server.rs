@@ -6,6 +6,7 @@ use hyper::server::{
     accept::Accept,
     conn::{AddrIncoming, Http},
 };
+use manager_model::{SoftwareOptions, ResetDataQueryParam};
 use tokio::{
     net::TcpListener,
     signal::{
@@ -167,7 +168,11 @@ impl AppServer {
                 match app
                     .state()
                     .update_manager()
-                    .send_update_backend_request(false)
+                    .send_update_request(
+                        SoftwareOptions::Backend,
+                        false,
+                        ResetDataQueryParam { reset_data: false }
+                    )
                     .await
                 {
                     Ok(()) => {

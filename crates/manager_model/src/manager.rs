@@ -20,7 +20,7 @@ pub struct SoftwareOptionsQueryParam {
     pub software_options: SoftwareOptions,
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum SoftwareOptions {
     Manager,
     Backend,
@@ -52,6 +52,12 @@ pub enum DownloadType {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
 pub struct RebootQueryParam {
     pub reboot: bool,
+}
+
+/// Reset data related to some software.
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
+pub struct ResetDataQueryParam {
+    pub reset_data: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, IntoParams)]

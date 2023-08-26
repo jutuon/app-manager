@@ -39,6 +39,7 @@ pub const PATH_PREFIX: &str = "/api/v1/";
         model::DownloadType,
         model::DownloadTypeQueryParam,
         model::RebootQueryParam,
+        model::ResetDataQueryParam,
         model::SoftwareInfo,
         model::BuildInfo,
         model::SystemInfoList,

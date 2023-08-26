@@ -38,6 +38,7 @@ public_api = "127.0.0.1:5000"
 # binary_signing_public_key = "binary-key.pub"
 # manager_install_location = "/home/app/binaries/app-manager"
 # backend_install_location = "/app-secure-storage/app/binaries/app-backend"
+# backend_data_reset_dir = "/path/to/backend/data" # Optional
 
 # [software_builder]
 # manager_download_key_path = "app-manager.key"
@@ -183,6 +184,11 @@ pub struct SoftwareUpdateProviderConfig {
     pub binary_signing_public_key: PathBuf,
     pub manager_install_location: PathBuf,
     pub backend_install_location: PathBuf,
+    /// Optional. Enableds data reset support for backend. This
+    /// directory will be moved next to the original dir with postfix
+    /// "-old" when backend is updated. If there is already a directory
+    /// with that name, it will be deleted.
+    pub backend_data_reset_dir: Option<PathBuf>
 }
 
 #[derive(Debug, Deserialize, Serialize)]

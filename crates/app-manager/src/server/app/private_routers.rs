@@ -52,8 +52,8 @@ impl PrivateRoutes {
                 api::manager::PATH_POST_RQUEST_SOFTWARE_UPDATE,
                 post({
                     let state = self.state.clone();
-                    move |param1, param2, param3| {
-                        api::manager::post_request_software_update(param1, param2, param3, state)
+                    move |param1, param2, param3, param4| {
+                        api::manager::post_request_software_update(param1, param2, param3, param4, state)
                     }
                 }),
             )

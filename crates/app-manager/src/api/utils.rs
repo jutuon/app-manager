@@ -3,13 +3,15 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use axum::{extract::ConnectInfo, middleware::Next, response::Response};
+use axum::{extract::ConnectInfo, middleware::Next, response::{Response, IntoResponse}};
 use headers::{Header, HeaderValue};
-use hyper::{header, Request, StatusCode};
+use hyper::{header, Request};
 use utoipa::{
     openapi::security::{ApiKeyValue, SecurityScheme},
     Modify,
 };
+
+use crate::{server::{update::UpdateError, client::ApiError, build::BuildError, info::SystemInfoError}, config::GetConfigError};
 
 use super::GetConfig;
 
@@ -89,5 +91,103 @@ impl Modify for SecurityApiTokenDefault {
                 )),
             )
         }
+    }
+}
+
+
+#[allow(non_camel_case_types)]
+pub enum StatusCode {
+    /// 400
+    BAD_REQUEST,
+    /// 401
+    UNAUTHORIZED,
+    /// 500
+    INTERNAL_SERVER_ERROR,
+    /// 406
+    NOT_ACCEPTABLE,
+    /// 404
+    NOT_FOUND,
+    /// 304
+    NOT_MODIFIED,
+    /// 423
+    LOCKED,
+}
+
+impl From<StatusCode> for hyper::StatusCode {
+    fn from(value: StatusCode) -> Self {
+        match value {
+            StatusCode::BAD_REQUEST => hyper::StatusCode::BAD_REQUEST,
+            StatusCode::UNAUTHORIZED => hyper::StatusCode::UNAUTHORIZED,
+            StatusCode::INTERNAL_SERVER_ERROR => hyper::StatusCode::INTERNAL_SERVER_ERROR,
+            StatusCode::NOT_ACCEPTABLE => hyper::StatusCode::NOT_ACCEPTABLE,
+            StatusCode::NOT_FOUND => hyper::StatusCode::NOT_FOUND,
+            StatusCode::NOT_MODIFIED => hyper::StatusCode::NOT_MODIFIED,
+            StatusCode::LOCKED => hyper::StatusCode::LOCKED,
+        }
+    }
+}
+
+impl IntoResponse for StatusCode {
+    fn into_response(self) -> Response {
+        let status: hyper::StatusCode = self.into();
+        status.into_response()
+    }
+}
+
+#[derive(thiserror::Error, Debug)]
+enum RequestError {
+    #[error("Update manager error")]
+    Update,
+
+    #[error("API error")]
+    Api,
+
+    #[error("Build error")]
+    Build,
+
+    #[error("Config error")]
+    Config,
+
+    #[error("System info error")]
+    SystemInfo,
+}
+
+impl From<error_stack::Report<UpdateError>> for StatusCode {
+    #[track_caller]
+    fn from(value: error_stack::Report<UpdateError>) -> Self {
+        tracing::error!("{:?}", value.change_context(RequestError::Update));
+        StatusCode::INTERNAL_SERVER_ERROR
+    }
+}
+
+impl From<error_stack::Report<ApiError>> for StatusCode {
+    #[track_caller]
+    fn from(value: error_stack::Report<ApiError>) -> Self {
+        tracing::error!("{:?}", value.change_context(RequestError::Api));
+        StatusCode::INTERNAL_SERVER_ERROR
+    }
+}
+
+impl From<error_stack::Report<BuildError>> for StatusCode {
+    #[track_caller]
+    fn from(value: error_stack::Report<BuildError>) -> Self {
+        tracing::error!("{:?}", value.change_context(RequestError::Build));
+        StatusCode::INTERNAL_SERVER_ERROR
+    }
+}
+
+impl From<error_stack::Report<GetConfigError>> for StatusCode {
+    #[track_caller]
+    fn from(value: error_stack::Report<GetConfigError>) -> Self {
+        tracing::error!("{:?}", value.change_context(RequestError::Config));
+        StatusCode::INTERNAL_SERVER_ERROR
+    }
+}
+
+impl From<error_stack::Report<SystemInfoError>> for StatusCode {
+    #[track_caller]
+    fn from(value: error_stack::Report<SystemInfoError>) -> Self {
+        tracing::error!("{:?}", value.change_context(RequestError::SystemInfo));
+        StatusCode::INTERNAL_SERVER_ERROR
     }
 }
