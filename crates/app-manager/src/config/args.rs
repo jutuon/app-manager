@@ -10,7 +10,7 @@ pub fn get_config() -> ArgsConfig {
         .arg(arg!(--"build-info" "Print build info and quit.").required(false))
         .get_matches();
 
-    if matches.is_present("build-info") {
+    if matches.get_flag("build-info") {
         println!("{}", super::info::build_info());
         exit(0)
     }
