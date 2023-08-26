@@ -10,13 +10,13 @@ use std::{
     time::Duration,
 };
 
-use error_stack::Result;
+use error_stack::{Result, ResultExt};
 use time::{OffsetDateTime, Time, UtcOffset};
 use tokio::{process::Command, sync::mpsc, task::JoinHandle, time::sleep};
 use tracing::{info, warn};
 
 use super::ServerQuitWatcher;
-use crate::{config::Config, utils::IntoReportExt};
+use crate::{config::Config, };
 
 /// If this file exists reboot system at some point. Works at least on Ubuntu.
 const REBOOT_REQUIRED_PATH: &str = "/var/run/reboot-required";
@@ -83,7 +83,7 @@ impl RebootManagerHandle {
         self.sender
             .send(RebootManagerMessage::RebootNow)
             .await
-            .into_error(RebootError::RebootManagerNotAvailable)?;
+            .change_context(RebootError::RebootManagerNotAvailable)?;
 
         Ok(())
     }
@@ -206,7 +206,7 @@ impl RebootManager {
             .arg("reboot")
             .status()
             .await
-            .into_error(RebootError::ProcessStartFailed)?;
+            .change_context(RebootError::ProcessStartFailed)?;
 
         if !status.success() {
             return Err(RebootError::CommandFailed(status).into());
@@ -222,7 +222,7 @@ impl RebootManager {
 
         let target_time = if let Some(reboot) = config.reboot_if_needed() {
             Time::from_hms(reboot.time.hours, reboot.time.minutes, 0)
-                .into_error(RebootError::TimeError)?
+                .change_context(RebootError::TimeError)?
         } else {
             futures::future::pending::<()>().await;
             return Err(RebootError::ConfigError.into());
@@ -248,7 +248,7 @@ impl RebootManager {
         let now: OffsetDateTime = OffsetDateTime::now_utc();
         let offset = Self::get_utc_offset_hours().await?;
         let now =
-            now.to_offset(UtcOffset::from_hms(offset, 0, 0).into_error(RebootError::TimeError)?);
+            now.to_offset(UtcOffset::from_hms(offset, 0, 0).change_context(RebootError::TimeError)?);
         Ok(now)
     }
 
@@ -257,14 +257,14 @@ impl RebootManager {
             .arg("+%z")
             .output()
             .await
-            .into_error(RebootError::ProcessWaitFailed)?;
+            .change_context(RebootError::ProcessWaitFailed)?;
 
         if !output.status.success() {
             tracing::error!("date command failed");
             return Err(RebootError::CommandFailed(output.status).into());
         }
 
-        let offset = std::str::from_utf8(&output.stdout).into_error(RebootError::InvalidOutput)?;
+        let offset = std::str::from_utf8(&output.stdout).change_context(RebootError::InvalidOutput)?;
 
         let multiplier = match offset.chars().nth(0) {
             Some('-') => -1,
@@ -278,7 +278,7 @@ impl RebootManager {
             .collect::<String>()
             .trim_start_matches('0')
             .parse::<i8>()
-            .into_error(RebootError::InvalidOutput)?;
+            .change_context(RebootError::InvalidOutput)?;
 
         Ok(hours * multiplier)
     }

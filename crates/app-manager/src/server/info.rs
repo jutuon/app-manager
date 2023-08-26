@@ -2,12 +2,12 @@
 
 use std::process::ExitStatus;
 
-use error_stack::Result;
+use error_stack::{Result, ResultExt};
 use manager_model::{CommandOutput, SystemInfo, SystemInfoList};
 use tokio::process::Command;
 
 use super::client::ApiManager;
-use crate::{config::Config, utils::IntoReportExt};
+use crate::{config::Config, };
 
 #[derive(thiserror::Error, Debug)]
 pub enum SystemInfoError {
@@ -141,7 +141,7 @@ impl SystemInfoGetter {
             .args(args)
             .output()
             .await
-            .into_error(SystemInfoError::ProcessWaitFailed)?;
+            .change_context(SystemInfoError::ProcessWaitFailed)?;
 
         if !output.status.success() {
             tracing::error!(
@@ -153,7 +153,7 @@ impl SystemInfoGetter {
             return Err(SystemInfoError::CommandFailed(output.status).into());
         }
 
-        let output = String::from_utf8(output.stdout).into_error(SystemInfoError::InvalidOutput)?;
+        let output = String::from_utf8(output.stdout).change_context(SystemInfoError::InvalidOutput)?;
 
         Ok(CommandOutput {
             name: format!("{} {}", cmd, args.join(" ")),

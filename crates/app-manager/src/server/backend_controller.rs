@@ -2,10 +2,10 @@
 
 use std::process::ExitStatus;
 
-use error_stack::Result;
+use error_stack::{Result, ResultExt};
 use tokio::process::Command;
 
-use crate::{config::Config, utils::IntoReportExt};
+use crate::{config::Config, };
 
 #[derive(thiserror::Error, Debug)]
 pub enum ControllerError {
@@ -36,7 +36,7 @@ impl<'a> BackendController<'a> {
             .arg(self.config.script_locations().start_backend())
             .status()
             .await
-            .into_error(ControllerError::ProcessWaitFailed)?;
+            .change_context(ControllerError::ProcessWaitFailed)?;
 
         if !status.success() {
             tracing::error!("Start backend failed with status: {:?}", status);
@@ -51,7 +51,7 @@ impl<'a> BackendController<'a> {
             .arg(self.config.script_locations().stop_backend())
             .status()
             .await
-            .into_error(ControllerError::ProcessWaitFailed)?;
+            .change_context(ControllerError::ProcessWaitFailed)?;
 
         if !status.success() {
             tracing::error!("Start backend failed with status: {:?}", status);

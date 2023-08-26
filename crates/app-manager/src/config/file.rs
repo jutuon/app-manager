@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use super::GetConfigError;
-use crate::utils::IntoReportExt;
+
 
 pub const CONFIG_FILE_NAME: &str = "manager_config.toml";
 
@@ -100,9 +100,9 @@ impl ConfigFile {
     pub fn save_default(dir: impl AsRef<Path>) -> Result<(), ConfigFileError> {
         let file_path =
             Self::default_config_file_path(dir).change_context(ConfigFileError::SaveDefault)?;
-        let mut file = std::fs::File::create(file_path).into_error(ConfigFileError::SaveDefault)?;
+        let mut file = std::fs::File::create(file_path).change_context(ConfigFileError::SaveDefault)?;
         file.write_all(DEFAULT_CONFIG_FILE_TEXT.as_bytes())
-            .into_error(ConfigFileError::SaveDefault)?;
+            .change_context(ConfigFileError::SaveDefault)?;
         Ok(())
     }
 
@@ -114,8 +114,8 @@ impl ConfigFile {
         }
 
         let config_string =
-            std::fs::read_to_string(file_path).into_error(ConfigFileError::LoadConfig)?;
-        toml::from_str(&config_string).into_error(ConfigFileError::LoadConfig)
+            std::fs::read_to_string(file_path).change_context(ConfigFileError::LoadConfig)?;
+        toml::from_str(&config_string).change_context(ConfigFileError::LoadConfig)
     }
 
     pub fn default_config_file_path(dir: impl AsRef<Path>) -> Result<PathBuf, ConfigFileError> {
@@ -152,7 +152,7 @@ impl ServerEncryptionKey {
     pub async fn read_encryption_key(&self) -> Result<DataEncryptionKey, GetConfigError> {
         tokio::fs::read_to_string(self.key_path.as_path())
             .await
-            .into_error(GetConfigError::EncryptionKeyLoadingFailed)
+            .change_context(GetConfigError::EncryptionKeyLoadingFailed)
             .map(|key| DataEncryptionKey { key })
     }
 }

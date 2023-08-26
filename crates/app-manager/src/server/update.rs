@@ -19,7 +19,7 @@ use super::{
 };
 use crate::{
     config::{file::SoftwareUpdateProviderConfig, Config},
-    utils::IntoReportExt,
+
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -114,7 +114,7 @@ impl UpdateManagerHandle {
                 force_reboot,
                 software: SoftwareOptions::Manager,
             })
-            .into_error(UpdateError::UpdateManagerNotAvailable)?;
+            .change_context(UpdateError::UpdateManagerNotAvailable)?;
 
         Ok(())
     }
@@ -125,7 +125,7 @@ impl UpdateManagerHandle {
                 force_reboot,
                 software: SoftwareOptions::Backend,
             })
-            .into_error(UpdateError::UpdateManagerNotAvailable)?;
+            .change_context(UpdateError::UpdateManagerNotAvailable)?;
 
         Ok(())
     }
@@ -255,10 +255,10 @@ impl UpdateManager {
 
         let current_build_info = tokio::fs::read_to_string(&current_info)
             .await
-            .into_error(UpdateError::FileReadingFailed)?;
+            .change_context(UpdateError::FileReadingFailed)?;
 
         let current_build_info =
-            serde_json::from_str(&current_build_info).into_error(UpdateError::InvalidInput)?;
+            serde_json::from_str(&current_build_info).change_context(UpdateError::InvalidInput)?;
 
         Ok(current_build_info)
     }
@@ -275,7 +275,7 @@ impl UpdateManager {
             update_dir.join(BuildDirCreator::encrypted_binary_name(software.to_str()));
         tokio::fs::write(&encrypted_binary_path, encrypted_binary)
             .await
-            .into_error(UpdateError::FileWritingFailed)?;
+            .change_context(UpdateError::FileWritingFailed)?;
 
         self.import_gpg_public_key().await?;
         let binary_path = update_dir.join(software.to_str());
@@ -286,10 +286,10 @@ impl UpdateManager {
             update_dir.join(BuildDirCreator::build_info_json_name(software.to_str()));
         tokio::fs::write(
             &latest_build_info_path,
-            serde_json::to_string_pretty(&latest_version).into_error(UpdateError::InvalidInput)?,
+            serde_json::to_string_pretty(&latest_version).change_context(UpdateError::InvalidInput)?,
         )
         .await
-        .into_error(UpdateError::FileWritingFailed)?;
+        .change_context(UpdateError::FileWritingFailed)?;
 
         Ok(())
     }
@@ -313,17 +313,17 @@ impl UpdateManager {
             );
             tokio::fs::rename(&installed_build_info_path, &installed_old_build_info_path)
                 .await
-                .into_error(UpdateError::FileMovingFailed)?;
+                .change_context(UpdateError::FileMovingFailed)?;
         }
 
         self.replace_binary(&binary_path, software).await?;
 
         tokio::fs::write(
             &installed_build_info_path,
-            serde_json::to_string_pretty(&latest_version).into_error(UpdateError::InvalidInput)?,
+            serde_json::to_string_pretty(&latest_version).change_context(UpdateError::InvalidInput)?,
         )
         .await
-        .into_error(UpdateError::FileWritingFailed)?;
+        .change_context(UpdateError::FileWritingFailed)?;
 
         REBOOT_ON_NEXT_CHECK.store(true, Ordering::Relaxed);
 
@@ -385,7 +385,7 @@ impl UpdateManager {
             info!("Remove previous binary {}", decrypted.display());
             tokio::fs::remove_file(&decrypted)
                 .await
-                .into_error(UpdateError::FileRemovingFailed)?;
+                .change_context(UpdateError::FileRemovingFailed)?;
         }
 
         info!("Decrypting binary {}", encrypted.display());
@@ -396,7 +396,7 @@ impl UpdateManager {
             .arg(&encrypted)
             .status()
             .await
-            .into_error(UpdateError::ProcessWaitFailed)?;
+            .change_context(UpdateError::ProcessWaitFailed)?;
         if !status.success() {
             tracing::error!("Decrypting binary failed");
             return Err(UpdateError::CommandFailed(status).into());
@@ -413,7 +413,7 @@ impl UpdateManager {
             .arg(&key_path)
             .status()
             .await
-            .into_error(UpdateError::ProcessWaitFailed)?;
+            .change_context(UpdateError::ProcessWaitFailed)?;
         if !status.success() {
             tracing::error!("Decrypting binary failed");
             return Err(UpdateError::CommandFailed(status).into());
@@ -435,19 +435,19 @@ impl UpdateManager {
         if target.exists() {
             tokio::fs::rename(&target, &target.with_extension("old"))
                 .await
-                .into_error(UpdateError::FileMovingFailed)?;
+                .change_context(UpdateError::FileMovingFailed)?;
         }
 
         tokio::fs::copy(&binary, &target)
             .await
-            .into_error(UpdateError::FileCopyingFailed)?;
+            .change_context(UpdateError::FileCopyingFailed)?;
 
         let status = Command::new("chmod")
             .arg("u+x")
             .arg(&target)
             .status()
             .await
-            .into_error(UpdateError::ProcessWaitFailed)?;
+            .change_context(UpdateError::ProcessWaitFailed)?;
         if !status.success() {
             tracing::error!("Changing binary permissions failed");
             return Err(UpdateError::CommandFailed(status).into());
@@ -505,18 +505,18 @@ impl UpdateDirCreator {
         if manager_info_path.exists() {
             let manager_info = tokio::fs::read_to_string(&manager_info_path)
                 .await
-                .into_error(UpdateError::FileReadingFailed)?;
+                .change_context(UpdateError::FileReadingFailed)?;
             let manager_info =
-                serde_json::from_str(&manager_info).into_error(UpdateError::InvalidInput)?;
+                serde_json::from_str(&manager_info).change_context(UpdateError::InvalidInput)?;
             info_vec.push(manager_info);
         }
 
         if backend_info_path.exists() {
             let backend_info = tokio::fs::read_to_string(&backend_info_path)
                 .await
-                .into_error(UpdateError::FileReadingFailed)?;
+                .change_context(UpdateError::FileReadingFailed)?;
             let backend_info =
-                serde_json::from_str(&backend_info).into_error(UpdateError::InvalidInput)?;
+                serde_json::from_str(&backend_info).change_context(UpdateError::InvalidInput)?;
             info_vec.push(backend_info);
         }
 

@@ -15,8 +15,8 @@ use tracing::info;
 use super::app::AppState;
 use crate::{
     api::GetApiManager,
-    config::{file::EncryptionKeyProviderConfig, Config},
-    utils::IntoReportExt,
+    config::{file::EncryptionKeyProviderConfig, Config}, utils::ContextExt,
+
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -70,26 +70,26 @@ impl MountManager {
             .arg(self.config.script_locations().open_encryption())
             .stdin(Stdio::piped())
             .spawn()
-            .into_error(MountError::ProcessStartFailed)?;
+            .change_context(MountError::ProcessStartFailed)?;
 
         if let Some(stdin) = c.stdin.as_mut() {
             stdin
                 .write_all(key.key.as_bytes())
                 .await
-                .into_error(MountError::ProcessStdinFailed)?;
+                .change_context(MountError::ProcessStdinFailed)?;
             stdin
                 .shutdown()
                 .await
-                .into_error(MountError::ProcessStdinFailed)?;
+                .change_context(MountError::ProcessStdinFailed)?;
         }
 
-        let status = c.wait().await.into_error(MountError::ProcessStartFailed)?;
+        let status = c.wait().await.change_context(MountError::ProcessStartFailed)?;
 
         if status.success() {
             info!("Opening was successfull.");
         } else {
             tracing::error!("Opening failed.");
-            return Err(MountError::CommandFailed(status)).into_report();
+            return Err(MountError::CommandFailed(status).report());
         }
 
         Ok(())
@@ -109,13 +109,13 @@ impl MountManager {
             .arg(self.config.script_locations().close_encryption())
             .status()
             .await
-            .into_error(MountError::ProcessStartFailed)?;
+            .change_context(MountError::ProcessStartFailed)?;
 
         if c.success() {
             info!("Closing was successfull.");
         } else {
             tracing::error!("Closing failed.");
-            return Err(MountError::CommandFailed(c)).into_report();
+            return Err(MountError::CommandFailed(c).report());
         }
 
         Ok(())
@@ -130,34 +130,34 @@ impl MountManager {
             )
             .status()
             .await
-            .into_error(MountError::ProcessStartFailed)?;
+            .change_context(MountError::ProcessStartFailed)?;
         if c.success() {
             info!("Default password is used. Password will be changed.");
             let mut c = Command::new("sudo")
                 .arg(self.config.script_locations().change_encryption_password())
                 .stdin(Stdio::piped())
                 .spawn()
-                .into_error(MountError::ProcessStartFailed)?;
+                .change_context(MountError::ProcessStartFailed)?;
 
             if let Some(stdin) = c.stdin.as_mut() {
                 stdin
                     .write_all(key.key.as_bytes())
                     .await
-                    .into_error(MountError::ProcessStdinFailed)?;
+                    .change_context(MountError::ProcessStdinFailed)?;
                 stdin
                     .shutdown()
                     .await
-                    .into_error(MountError::ProcessStdinFailed)?;
+                    .change_context(MountError::ProcessStdinFailed)?;
             }
 
-            let status = c.wait().await.into_error(MountError::ProcessStartFailed)?;
+            let status = c.wait().await.change_context(MountError::ProcessStartFailed)?;
 
             if status.success() {
                 info!("Password change was successfull.");
                 Ok(())
             } else {
                 tracing::error!("Password change failed.");
-                Err(MountError::CommandFailed(status)).into_report()
+                Err(MountError::CommandFailed(status).report())
             }
         } else {
             info!("Encryption password is not the default password.");

@@ -32,7 +32,7 @@ utoipa = { version = "3.0.1", features = ["axum_extras", "uuid"] }
 utoipa-swagger-ui = { version = "3.0.1", features = ["axum"] }
 
 thiserror = "1.0.37"
-error-stack = "0.2.3"
+error-stack = "0.4"
 
 time = { version = "0.3.20" }
 

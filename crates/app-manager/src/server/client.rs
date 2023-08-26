@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use error_stack::Result;
+use error_stack::{Result, ResultExt};
 use manager_api::{ApiKey, Configuration, ManagerApi};
 use manager_model::{BuildInfo, DataEncryptionKey, SoftwareOptions, SystemInfo};
 use tracing::info;
 
-use crate::{config::Config, utils::IntoReportExt};
+use crate::{config::Config, };
 
 #[derive(thiserror::Error, Debug)]
 pub enum ApiError {
@@ -50,7 +50,7 @@ impl ApiClient {
             client = client.add_root_certificate(cert.clone());
         }
 
-        let client = client.build().into_error(ApiError::ClientBuildFailed)?;
+        let client = client.build().change_context(ApiError::ClientBuildFailed)?;
 
         let encryption_key_provider = config.encryption_key_provider().map(|url| {
             let url = url
@@ -162,7 +162,7 @@ impl<'a> ApiManager<'a> {
             &provider.key_name,
         )
         .await
-        .into_error(ApiError::ApiRequest)
+        .change_context(ApiError::ApiRequest)
     }
 
     pub async fn get_latest_build_info_raw(
@@ -174,7 +174,7 @@ impl<'a> ApiManager<'a> {
             options,
         )
         .await
-        .into_error(ApiError::ApiRequest)
+        .change_context(ApiError::ApiRequest)
     }
 
     pub async fn get_latest_build_info(
@@ -186,7 +186,7 @@ impl<'a> ApiManager<'a> {
             options,
         )
         .await
-        .into_error(ApiError::InvalidValue)
+        .change_context(ApiError::InvalidValue)
     }
 
     pub async fn get_latest_encrypted_software_binary(
@@ -198,7 +198,7 @@ impl<'a> ApiManager<'a> {
             options,
         )
         .await
-        .into_error(ApiError::ApiRequest)
+        .change_context(ApiError::ApiRequest)
     }
 
     pub async fn request_build_software_from_build_server(
@@ -210,7 +210,7 @@ impl<'a> ApiManager<'a> {
             options,
         )
         .await
-        .into_error(ApiError::ApiRequest)
+        .change_context(ApiError::ApiRequest)
     }
 
     pub async fn system_info(&self, remote_manager_name: &str) -> Result<SystemInfo, ApiError> {
@@ -219,6 +219,6 @@ impl<'a> ApiManager<'a> {
                 .system_info_remote_manager_config(remote_manager_name)?,
         )
         .await
-        .into_error(ApiError::ApiRequest)
+        .change_context(ApiError::ApiRequest)
     }
 }

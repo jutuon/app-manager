@@ -5,7 +5,7 @@ use std::{
     vec,
 };
 
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use rustls_pemfile::{certs, rsa_private_keys};
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tracing::{info, log::warn};
@@ -14,7 +14,7 @@ use self::file::{
     ConfigFile, EncryptionKeyProviderConfig, RebootIfNeededConfig, ServerEncryptionKey,
     SocketConfig, SoftwareBuilderConfig, SoftwareUpdateProviderConfig, SystemInfoConfig,
 };
-use crate::utils::IntoReportExt;
+
 
 pub mod args;
 pub mod file;
@@ -119,7 +119,7 @@ impl Config {
 pub fn get_config() -> Result<Config, GetConfigError> {
     let _args_config = args::get_config();
 
-    let current_dir = std::env::current_dir().into_error(GetConfigError::GetWorkingDir)?;
+    let current_dir = std::env::current_dir().change_context(GetConfigError::GetWorkingDir)?;
     let file_config =
         file::ConfigFile::load(current_dir).change_context(GetConfigError::LoadFileError)?;
 
@@ -138,7 +138,6 @@ pub fn get_config() -> Result<Config, GetConfigError> {
 
     if public_api_tls_config.is_none() && !file_config.debug.unwrap_or_default() {
         return Err(GetConfigError::TlsConfigMissing)
-            .into_report()
             .attach_printable("TLS must be configured when debug mode is false");
     }
 
@@ -214,27 +213,24 @@ fn check_script_locations(
         })
     } else {
         Err(GetConfigError::ScriptLocationError)
-            .into_report()
             .attach_printable(errors.join("\n"))
     }
 }
 
 fn load_root_certificate(cert_path: &Path) -> Result<reqwest::Certificate, GetConfigError> {
     let mut cert_reader =
-        BufReader::new(std::fs::File::open(cert_path).into_error(GetConfigError::CreateTlsConfig)?);
-    let all_certs = certs(&mut cert_reader).into_error(GetConfigError::CreateTlsConfig)?;
+        BufReader::new(std::fs::File::open(cert_path).change_context(GetConfigError::CreateTlsConfig)?);
+    let all_certs = certs(&mut cert_reader).change_context(GetConfigError::CreateTlsConfig)?;
     let cert = if let [cert] = &all_certs[..] {
         reqwest::Certificate::from_der(&cert.clone())
     } else if all_certs.is_empty() {
         return Err(GetConfigError::CreateTlsConfig)
-            .into_report()
             .attach_printable("No cert found");
     } else {
         return Err(GetConfigError::CreateTlsConfig)
-            .into_report()
             .attach_printable("Only one cert supported");
     }
-    .into_error(GetConfigError::CreateTlsConfig)?;
+    .change_context(GetConfigError::CreateTlsConfig)?;
     Ok(cert)
 }
 
@@ -243,33 +239,29 @@ fn generate_server_config(
     cert_path: &Path,
 ) -> Result<ServerConfig, GetConfigError> {
     let mut key_reader =
-        BufReader::new(std::fs::File::open(key_path).into_error(GetConfigError::CreateTlsConfig)?);
-    let all_keys = rsa_private_keys(&mut key_reader).into_error(GetConfigError::CreateTlsConfig)?;
+        BufReader::new(std::fs::File::open(key_path).change_context(GetConfigError::CreateTlsConfig)?);
+    let all_keys = rsa_private_keys(&mut key_reader).change_context(GetConfigError::CreateTlsConfig)?;
 
     let key = if let [key] = &all_keys[..] {
         PrivateKey(key.clone())
     } else if all_keys.is_empty() {
         return Err(GetConfigError::CreateTlsConfig)
-            .into_report()
             .attach_printable("No key found");
     } else {
         return Err(GetConfigError::CreateTlsConfig)
-            .into_report()
             .attach_printable("Only one key supported");
     };
 
     let mut cert_reader =
-        BufReader::new(std::fs::File::open(cert_path).into_error(GetConfigError::CreateTlsConfig)?);
-    let all_certs = certs(&mut cert_reader).into_error(GetConfigError::CreateTlsConfig)?;
+        BufReader::new(std::fs::File::open(cert_path).change_context(GetConfigError::CreateTlsConfig)?);
+    let all_certs = certs(&mut cert_reader).change_context(GetConfigError::CreateTlsConfig)?;
     let cert = if let [cert] = &all_certs[..] {
         Certificate(cert.clone())
     } else if all_certs.is_empty() {
         return Err(GetConfigError::CreateTlsConfig)
-            .into_report()
             .attach_printable("No cert found");
     } else {
         return Err(GetConfigError::CreateTlsConfig)
-            .into_report()
             .attach_printable("Only one cert supported");
     };
 
@@ -277,7 +269,7 @@ fn generate_server_config(
         .with_safe_defaults()
         .with_no_client_auth() // TODO: configure at some point
         .with_single_cert(vec![cert], key)
-        .into_error(GetConfigError::CreateTlsConfig)?;
+        .change_context(GetConfigError::CreateTlsConfig)?;
 
     Ok(config)
 }

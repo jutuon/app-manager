@@ -16,7 +16,7 @@ use tracing::{info, warn};
 use super::ServerQuitWatcher;
 use crate::{
     config::{file::SoftwareBuilderConfig, Config},
-    utils::IntoReportExt,
+
 };
 
 pub const GPG_KEY_NAME: &str = "app-manager-software-builder";
@@ -97,12 +97,12 @@ impl BuildManagerHandle {
             SoftwareOptions::Manager => {
                 self.sender
                     .try_send(BuildManagerMessage::BuildNewManagerVersion)
-                    .into_error(BuildError::BuildManagerNotAvailable)?;
+                    .change_context(BuildError::BuildManagerNotAvailable)?;
             }
             SoftwareOptions::Backend => {
                 self.sender
                     .try_send(BuildManagerMessage::BuildNewBackendVersion)
-                    .into_error(BuildError::BuildManagerNotAvailable)?;
+                    .change_context(BuildError::BuildManagerNotAvailable)?;
             }
         }
 
@@ -112,7 +112,7 @@ impl BuildManagerHandle {
     pub async fn send_build_new_backend_version(&self) -> Result<(), BuildError> {
         self.sender
             .try_send(BuildManagerMessage::BuildNewBackendVersion)
-            .into_error(BuildError::BuildManagerNotAvailable)?;
+            .change_context(BuildError::BuildManagerNotAvailable)?;
 
         Ok(())
     }
@@ -326,7 +326,7 @@ impl BuildManager {
             .arg(repository_path)
             .status()
             .await
-            .into_error(BuildError::ProcessWaitFailed)?;
+            .change_context(BuildError::ProcessWaitFailed)?;
 
         if !status.success() {
             tracing::error!(
@@ -352,7 +352,7 @@ impl BuildManager {
             .arg(repository_branch)
             .status()
             .await
-            .into_error(BuildError::ProcessWaitFailed)?;
+            .change_context(BuildError::ProcessWaitFailed)?;
 
         if !status.success() {
             tracing::error!("Git pull failed");
@@ -374,14 +374,14 @@ impl BuildManager {
             .arg("HEAD")
             .output()
             .await
-            .into_error(BuildError::ProcessWaitFailed)?;
+            .change_context(BuildError::ProcessWaitFailed)?;
 
         if !output.status.success() {
             tracing::error!("Git rev-parse failed");
             return Err(BuildError::CommandFailed(output.status).into());
         }
 
-        let sha = std::str::from_utf8(&output.stdout).into_error(BuildError::InvalidOutput)?;
+        let sha = std::str::from_utf8(&output.stdout).change_context(BuildError::InvalidOutput)?;
 
         Ok(sha.to_string())
     }
@@ -398,10 +398,10 @@ impl BuildManager {
 
         let build_info = tokio::fs::read_to_string(&latest_build_info)
             .await
-            .into_error(BuildError::FileReadingFailed)?;
+            .change_context(BuildError::FileReadingFailed)?;
 
         let build_info: BuildInfo =
-            serde_json::from_str(&build_info).into_error(BuildError::InvalidInput)?;
+            serde_json::from_str(&build_info).change_context(BuildError::InvalidInput)?;
 
         info!(
             "Latest {} build is from commit {}",
@@ -426,7 +426,7 @@ impl BuildManager {
             .current_dir(repository_path)
             .status()
             .await
-            .into_error(BuildError::ProcessWaitFailed)?;
+            .change_context(BuildError::ProcessWaitFailed)?;
 
         if !status.success() {
             tracing::error!("Running pre-build script failed.");
@@ -451,7 +451,7 @@ impl BuildManager {
             .current_dir(repository_path)
             .status()
             .await
-            .into_error(BuildError::ProcessWaitFailed)?;
+            .change_context(BuildError::ProcessWaitFailed)?;
 
         if !status.success() {
             tracing::error!("Cargo build failed. Make sure that cargo is accessible.");
@@ -469,11 +469,11 @@ impl BuildManager {
             .current_dir(repository_path)
             .output()
             .await
-            .into_error(BuildError::ProcessWaitFailed)?;
+            .change_context(BuildError::ProcessWaitFailed)?;
 
         if output.status.success() {
             let output =
-                std::str::from_utf8(&output.stdout).into_error(BuildError::InvalidOutput)?;
+                std::str::from_utf8(&output.stdout).change_context(BuildError::InvalidOutput)?;
 
             Ok(BinaryBuildInfoOutput(output.to_string()))
         } else {
@@ -504,14 +504,14 @@ impl BuildManager {
         let target_binary = build_dir_for_current.join(binary);
         tokio::fs::copy(&binary_path, target_binary)
             .await
-            .into_error(BuildError::FileCopyingFailed)?;
+            .change_context(BuildError::FileCopyingFailed)?;
 
         info!("Check that GPG key exists");
         let output = Command::new("gpg")
             .arg("--list-secret-keys")
             .output()
             .await
-            .into_error(BuildError::ProcessWaitFailed)?;
+            .change_context(BuildError::ProcessWaitFailed)?;
         if !output.status.success() {
             tracing::error!("Checking that GPG key exists failed");
             return Err(BuildError::CommandFailed(output.status).into());
@@ -528,7 +528,7 @@ impl BuildManager {
                 .arg("none")
                 .status()
                 .await
-                .into_error(BuildError::ProcessWaitFailed)?;
+                .change_context(BuildError::ProcessWaitFailed)?;
 
             if !status.success() {
                 tracing::error!("Generating GPG key failed");
@@ -550,7 +550,7 @@ impl BuildManager {
             .current_dir(&build_dir_for_current)
             .status()
             .await
-            .into_error(BuildError::ProcessWaitFailed)?;
+            .change_context(BuildError::ProcessWaitFailed)?;
         if !status.success() {
             tracing::error!("Signing and encrypting binary failed");
             return Err(BuildError::CommandFailed(status).into());
@@ -566,21 +566,21 @@ impl BuildManager {
         let build_info_path = build_dir_for_current.join(&build_info_file);
         tokio::fs::write(
             &build_info_path,
-            serde_json::to_string_pretty(&build_info).into_error(BuildError::FileWritingFailed)?,
+            serde_json::to_string_pretty(&build_info).change_context(BuildError::FileWritingFailed)?,
         )
         .await
-        .into_error(BuildError::FileWritingFailed)?;
+        .change_context(BuildError::FileWritingFailed)?;
 
         let latest_dir = self.create_latest_dir_if_needed();
         tokio::fs::copy(&binary_path, latest_dir.join(binary))
             .await
-            .into_error(BuildError::FileCopyingFailed)?;
+            .change_context(BuildError::FileCopyingFailed)?;
         tokio::fs::copy(&signature_path, latest_dir.join(&signature_file_name))
             .await
-            .into_error(BuildError::FileCopyingFailed)?;
+            .change_context(BuildError::FileCopyingFailed)?;
         tokio::fs::copy(&build_info_path, latest_dir.join(&build_info_file))
             .await
-            .into_error(BuildError::FileCopyingFailed)?;
+            .change_context(BuildError::FileCopyingFailed)?;
 
         Ok(())
     }
@@ -724,13 +724,15 @@ impl BuildDirCreator {
                 let binary_path = latest_dir.join(Self::encrypted_binary_name(binary));
                 tokio::fs::read(&binary_path)
                     .await
-                    .into_error_with_info(BuildError::FileReadingFailed, binary_path.display().to_string())
+                    .change_context(BuildError::FileReadingFailed)
+                    .attach_printable(binary_path.display().to_string())
             }
             DownloadType::Info => {
                 let path = latest_dir.join(Self::build_info_json_name(binary));
                 tokio::fs::read(&path)
                     .await
-                    .into_error_with_info(BuildError::FileReadingFailed, path.display().to_string())
+                    .change_context(BuildError::FileReadingFailed)
+                    .attach_printable(path.display().to_string())
             }
         }
     }

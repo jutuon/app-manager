@@ -7,72 +7,15 @@ pub type QuitSender = oneshot::Sender<()>;
 /// Receiver only used for quit request message receiving.
 pub type QuitReceiver = oneshot::Receiver<()>;
 
-pub trait IntoReportExt: IntoReport {
-    #[track_caller]
-    fn into_error<C: Context>(self, context: C) -> Result<<Self as IntoReport>::Ok, C> {
-        self.into_report().change_context(context)
-    }
 
+pub trait ContextExt: Context + Sized {
     #[track_caller]
-    fn into_error_with_info<
-        C: Context,
-        I: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-    >(
-        self,
-        context: C,
-        info: I,
-    ) -> Result<<Self as IntoReport>::Ok, C> {
-        self.into_report()
-            .change_context(context)
-            .attach_printable(info)
-    }
-
-    #[track_caller]
-    fn into_error_with_info_lazy<
-        C: Context,
-        F: FnOnce() -> I,
-        I: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-    >(
-        self,
-        context: C,
-        info: F,
-    ) -> Result<<Self as IntoReport>::Ok, C> {
-        self.into_report()
-            .change_context(context)
-            .attach_printable_lazy(info)
+    fn report(self) -> Report<Self> {
+        error_stack::report!(self)
     }
 }
 
-impl<T: IntoReport> IntoReportExt for T {}
-
-pub trait ErrorResultExt: ResultExt + Sized {
-    #[track_caller]
-    fn change_context_with_info<
-        C: Context,
-        I: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-    >(
-        self,
-        context: C,
-        info: I,
-    ) -> Result<<Self as ResultExt>::Ok, C> {
-        self.change_context(context).attach_printable(info)
-    }
-
-    #[track_caller]
-    fn change_context_with_info_lazy<
-        C: Context,
-        F: FnOnce() -> I,
-        I: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-    >(
-        self,
-        context: C,
-        info: F,
-    ) -> Result<<Self as ResultExt>::Ok, C> {
-        self.change_context(context).attach_printable_lazy(info)
-    }
-}
-
-impl<T: ResultExt + Sized> ErrorResultExt for T {}
+impl<E: Context + Sized> ContextExt for E {}
 
 pub trait ErrorConversion: ResultExt + Sized {
     type Err: Context;
@@ -84,7 +27,7 @@ pub trait ErrorConversion: ResultExt + Sized {
         self,
         info: I,
     ) -> Result<<Self as ResultExt>::Ok, Self::Err> {
-        self.change_context_with_info(Self::ERROR, info)
+        self.change_context(Self::ERROR).attach_printable(info)
     }
 
     /// Change error context and add additional info about error. Sets
@@ -97,7 +40,7 @@ pub trait ErrorConversion: ResultExt + Sized {
         self,
         info: F,
     ) -> Result<<Self as ResultExt>::Ok, Self::Err> {
-        self.change_context_with_info_lazy(Self::ERROR, info)
+        self.change_context(Self::ERROR).attach_printable_lazy(info)
     }
 }
 
