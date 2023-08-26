@@ -420,7 +420,9 @@ impl BuildManager {
             "Running pre-build script for {} repository",
             repository_name
         );
-        let status: ExitStatus = Command::new(pre_build_script_path)
+        let status: ExitStatus = Command::new("/bin/bash")
+            .arg("-eux")
+            .arg(pre_build_script_path)
             .current_dir(repository_path)
             .status()
             .await
