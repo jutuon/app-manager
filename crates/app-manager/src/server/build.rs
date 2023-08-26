@@ -6,7 +6,7 @@ use std::{
     sync::Arc,
 };
 
-use error_stack::Result;
+use error_stack::{Result, ResultExt};
 use manager_model::{
     BuildInfo, DownloadType, SoftwareOptions, BACKEND_REPOSITORY_NAME, MANAGER_REPOSITORY_NAME,
 };
@@ -724,13 +724,13 @@ impl BuildDirCreator {
                 let binary_path = latest_dir.join(Self::encrypted_binary_name(binary));
                 tokio::fs::read(&binary_path)
                     .await
-                    .into_error(BuildError::FileReadingFailed)
+                    .into_error_with_info(BuildError::FileReadingFailed, binary_path.display().to_string())
             }
             DownloadType::Info => {
                 let path = latest_dir.join(Self::build_info_json_name(binary));
                 tokio::fs::read(&path)
                     .await
-                    .into_error(BuildError::FileReadingFailed)
+                    .into_error_with_info(BuildError::FileReadingFailed, path.display().to_string())
             }
         }
     }
