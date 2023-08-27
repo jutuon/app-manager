@@ -27,11 +27,25 @@ pub enum SoftwareOptions {
 }
 
 impl SoftwareOptions {
-    pub fn to_str(&self) -> &'static str {
+    pub const MANAGER: &'static str = MANAGER_REPOSITORY_NAME;
+    pub const BACKEND: &'static str = BACKEND_REPOSITORY_NAME;
+
+    pub const fn to_str(&self) -> &'static str {
         match self {
             Self::Manager => MANAGER_REPOSITORY_NAME,
             Self::Backend => BACKEND_REPOSITORY_NAME,
         }
+    }
+}
+
+impl TryFrom<&str> for SoftwareOptions {
+    type Error = ();
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(match value {
+            Self::BACKEND => Self::Backend,
+            Self::MANAGER => Self::Manager,
+            _ => return Err(()),
+        })
     }
 }
 
