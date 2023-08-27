@@ -2,7 +2,7 @@
 
 use std::process::exit;
 
-use clap::{arg, command, Args, FromArgMatches, Parser};
+use clap::{arg, command, Args, Parser};
 use manager_model::SoftwareOptions;
 use url::Url;
 
