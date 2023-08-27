@@ -2,12 +2,11 @@
 //!
 
 use std::{
-    path::Path,
     process::{ExitStatus, Stdio},
     sync::Arc,
 };
 
-use error_stack::{IntoReport, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use manager_model::DataEncryptionKey;
 use tokio::{io::AsyncWriteExt, process::Command};
 use tracing::{info, error};

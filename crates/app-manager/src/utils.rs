@@ -1,4 +1,4 @@
-use error_stack::{Context, IntoReport, Report, Result, ResultExt};
+use error_stack::{Context, Report, Result, ResultExt};
 use tokio::sync::oneshot;
 
 /// Sender only used for quit request message sending.

@@ -4,7 +4,7 @@
 #![warn(unused_crate_dependencies)]
 
 use config::args::AppMode;
-use tracing::{error, info};
+
 
 pub mod api;
 pub mod config;

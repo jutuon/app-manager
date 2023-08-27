@@ -6,9 +6,9 @@ use axum::{
 };
 use manager_model::{
     DataEncryptionKey, DownloadType, DownloadTypeQueryParam, RebootQueryParam, ServerNameText,
-    SoftwareInfo, SoftwareOptions, SoftwareOptionsQueryParam, SystemInfo, SystemInfoList, ResetDataQueryParam,
+    SoftwareInfo, SoftwareOptionsQueryParam, SystemInfo, SystemInfoList, ResetDataQueryParam,
 };
-use tracing::{error, info};
+use tracing::{info};
 
 use super::{GetApiManager, GetBuildManager, GetConfig, GetUpdateManager, utils::StatusCode};
 use crate::server::{build::BuildDirCreator, info::SystemInfoGetter, update::UpdateDirCreator};

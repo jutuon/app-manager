@@ -1,8 +1,8 @@
 //! Config given as command line arguments
 
-use std::{process::exit, default};
+use std::{process::exit};
 
-use clap::{arg, command, Command, builder::{Str, PossibleValue}, ArgMatches, Parser, Subcommand, FromArgMatches, Args};
+use clap::{arg, command, Parser, FromArgMatches, Args};
 use manager_model::SoftwareOptions;
 use url::Url;
 

@@ -3,12 +3,12 @@
 
 use url::Url;
 
-use crate::{config::{Config, args::{ApiCommand, ArgsConfig, ApiClientMode}}, server::client::{ApiClient, ApiError}};
+use crate::{config::{args::{ApiCommand, ApiClientMode}}, server::client::{ApiError}};
 
 
 use error_stack::{Result, ResultExt};
 use manager_api::{ApiKey, Configuration, ManagerApi};
-use manager_model::{BuildInfo, DataEncryptionKey, SoftwareOptions, SystemInfo, ResetDataQueryParam};
+use manager_model::{ResetDataQueryParam};
 
 
 pub async fn handle_api_client_mode(
