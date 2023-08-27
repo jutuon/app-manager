@@ -16,7 +16,7 @@ use tokio::{process::Command, sync::mpsc, task::JoinHandle, time::sleep};
 use tracing::{info, warn};
 
 use super::ServerQuitWatcher;
-use crate::{config::Config, };
+use crate::config::Config;
 
 /// If this file exists reboot system at some point. Works at least on Ubuntu.
 const REBOOT_REQUIRED_PATH: &str = "/var/run/reboot-required";
@@ -247,8 +247,8 @@ impl RebootManager {
     pub async fn get_local_time() -> Result<OffsetDateTime, RebootError> {
         let now: OffsetDateTime = OffsetDateTime::now_utc();
         let offset = Self::get_utc_offset_hours().await?;
-        let now =
-            now.to_offset(UtcOffset::from_hms(offset, 0, 0).change_context(RebootError::TimeError)?);
+        let now = now
+            .to_offset(UtcOffset::from_hms(offset, 0, 0).change_context(RebootError::TimeError)?);
         Ok(now)
     }
 
@@ -264,7 +264,8 @@ impl RebootManager {
             return Err(RebootError::CommandFailed(output.status).into());
         }
 
-        let offset = std::str::from_utf8(&output.stdout).change_context(RebootError::InvalidOutput)?;
+        let offset =
+            std::str::from_utf8(&output.stdout).change_context(RebootError::InvalidOutput)?;
 
         let multiplier = match offset.chars().nth(0) {
             Some('-') => -1,

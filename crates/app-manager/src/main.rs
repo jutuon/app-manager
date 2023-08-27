@@ -5,12 +5,11 @@
 
 use config::args::AppMode;
 
-
 pub mod api;
+pub mod client;
 pub mod config;
 pub mod server;
 pub mod utils;
-pub mod client;
 
 fn main() {
     let args = crate::config::args::get_config();

@@ -14,10 +14,7 @@ use tokio::{process::Command, sync::mpsc, task::JoinHandle};
 use tracing::{info, warn};
 
 use super::ServerQuitWatcher;
-use crate::{
-    config::{file::SoftwareBuilderConfig, Config},
-
-};
+use crate::config::{file::SoftwareBuilderConfig, Config};
 
 pub const GPG_KEY_NAME: &str = "app-manager-software-builder";
 
@@ -566,7 +563,8 @@ impl BuildManager {
         let build_info_path = build_dir_for_current.join(&build_info_file);
         tokio::fs::write(
             &build_info_path,
-            serde_json::to_string_pretty(&build_info).change_context(BuildError::FileWritingFailed)?,
+            serde_json::to_string_pretty(&build_info)
+                .change_context(BuildError::FileWritingFailed)?,
         )
         .await
         .change_context(BuildError::FileWritingFailed)?;

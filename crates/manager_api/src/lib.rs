@@ -16,12 +16,15 @@ pub use manager_api_client::apis::{
 };
 use manager_api_client::{
     apis::manager_api::{
-        get_encryption_key, post_request_build_software, post_request_software_update,
-        GetLatestSoftwareError, get_system_info_all, get_software_info,
+        get_encryption_key, get_software_info, get_system_info_all, post_request_build_software,
+        post_request_software_update, GetLatestSoftwareError,
     },
     manual_additions::get_latest_software_fixed,
 };
-use manager_model::{BuildInfo, CommandOutput, DataEncryptionKey, SoftwareOptions, SystemInfo, SystemInfoList, SoftwareInfo, ResetDataQueryParam};
+use manager_model::{
+    BuildInfo, CommandOutput, DataEncryptionKey, ResetDataQueryParam, SoftwareInfo,
+    SoftwareOptions, SystemInfo, SystemInfoList,
+};
 
 pub struct ManagerApi;
 
@@ -95,9 +98,7 @@ impl ManagerApi {
     pub async fn system_info_all(
         configuration: &Configuration,
     ) -> Result<SystemInfoList, Error<GetSystemInfoAllError>> {
-        let system_info =
-            get_system_info_all(configuration)
-                .await?;
+        let system_info = get_system_info_all(configuration).await?;
 
         let info_vec = system_info
             .info
@@ -153,15 +154,19 @@ impl ManagerApi {
             SoftwareOptions::Backend => manager_api_client::models::SoftwareOptions::Backend,
         };
 
-        post_request_software_update(configuration, converted_options, reboot, reset_data.reset_data).await
+        post_request_software_update(
+            configuration,
+            converted_options,
+            reboot,
+            reset_data.reset_data,
+        )
+        .await
     }
 
-     pub async fn software_info(
+    pub async fn software_info(
         configuration: &Configuration,
     ) -> Result<SoftwareInfo, Error<GetSoftwareInfoError>> {
-        let info =
-            get_software_info(configuration)
-                .await?;
+        let info = get_software_info(configuration).await?;
 
         let info_vec = info
             .current_software

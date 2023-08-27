@@ -7,7 +7,7 @@ use std::{
 };
 
 use error_stack::{Result, ResultExt};
-use manager_model::{BuildInfo, SoftwareInfo, SoftwareOptions, ResetDataQueryParam};
+use manager_model::{BuildInfo, ResetDataQueryParam, SoftwareInfo, SoftwareOptions};
 use tokio::{process::Command, sync::mpsc, task::JoinHandle};
 use tracing::{info, warn};
 
@@ -18,8 +18,8 @@ use super::{
     ServerQuitWatcher,
 };
 use crate::{
-    config::{file::SoftwareUpdateProviderConfig, Config}, utils::ContextExt,
-
+    config::{file::SoftwareUpdateProviderConfig, Config},
+    utils::ContextExt,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -115,7 +115,12 @@ pub struct UpdateManagerHandle {
 }
 
 impl UpdateManagerHandle {
-    pub async fn send_update_request(&self, software: SoftwareOptions, force_reboot: bool, reset_data: ResetDataQueryParam) -> Result<(), UpdateError> {
+    pub async fn send_update_request(
+        &self,
+        software: SoftwareOptions,
+        force_reboot: bool,
+        reset_data: ResetDataQueryParam,
+    ) -> Result<(), UpdateError> {
         self.sender
             .try_send(UpdateManagerMessage::UpdateSoftware {
                 force_reboot,
@@ -191,7 +196,10 @@ impl UpdateManager {
                 force_reboot,
                 reset_data,
                 software,
-            } => match self.update_software(force_reboot, reset_data, software).await {
+            } => match self
+                .update_software(force_reboot, reset_data, software)
+                .await
+            {
                 Ok(()) => {
                     info!("Software update finished");
                 }
@@ -284,7 +292,8 @@ impl UpdateManager {
             update_dir.join(BuildDirCreator::build_info_json_name(software.to_str()));
         tokio::fs::write(
             &latest_build_info_path,
-            serde_json::to_string_pretty(&latest_version).change_context(UpdateError::InvalidInput)?,
+            serde_json::to_string_pretty(&latest_version)
+                .change_context(UpdateError::InvalidInput)?,
         )
         .await
         .change_context(UpdateError::FileWritingFailed)?;
@@ -319,7 +328,8 @@ impl UpdateManager {
 
         tokio::fs::write(
             &installed_build_info_path,
-            serde_json::to_string_pretty(&latest_version).change_context(UpdateError::InvalidInput)?,
+            serde_json::to_string_pretty(&latest_version)
+                .change_context(UpdateError::InvalidInput)?,
         )
         .await
         .change_context(UpdateError::FileWritingFailed)?;

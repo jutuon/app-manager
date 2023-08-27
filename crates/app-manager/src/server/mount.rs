@@ -9,13 +9,13 @@ use std::{
 use error_stack::{Result, ResultExt};
 use manager_model::DataEncryptionKey;
 use tokio::{io::AsyncWriteExt, process::Command};
-use tracing::{info, error};
+use tracing::{error, info};
 
 use super::app::AppState;
 use crate::{
     api::GetApiManager,
-    config::{file::SecureStorageConfig, Config}, utils::ContextExt,
-
+    config::{file::SecureStorageConfig, Config},
+    utils::ContextExt,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -80,7 +80,10 @@ impl MountManager {
                 .change_context(MountError::ProcessStdinFailed)?;
         }
 
-        let status = c.wait().await.change_context(MountError::ProcessStartFailed)?;
+        let status = c
+            .wait()
+            .await
+            .change_context(MountError::ProcessStartFailed)?;
 
         if status.success() {
             info!("Mounting was successfull.");
@@ -91,7 +94,10 @@ impl MountManager {
         }
     }
 
-    pub async fn unmount_if_needed(&self, storage_config: &SecureStorageConfig) -> Result<(), MountError> {
+    pub async fn unmount_if_needed(
+        &self,
+        storage_config: &SecureStorageConfig,
+    ) -> Result<(), MountError> {
         if !storage_config.availability_check_path.exists() {
             info!("Secure storage is already unmounted");
             return Ok(());
@@ -144,7 +150,10 @@ impl MountManager {
                     .change_context(MountError::ProcessStdinFailed)?;
             }
 
-            let status = c.wait().await.change_context(MountError::ProcessStartFailed)?;
+            let status = c
+                .wait()
+                .await
+                .change_context(MountError::ProcessStartFailed)?;
 
             if status.success() {
                 info!("Password change was successfull.");

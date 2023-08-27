@@ -7,7 +7,7 @@ use manager_model::{CommandOutput, SystemInfo, SystemInfoList};
 use tokio::process::Command;
 
 use super::client::ApiManager;
-use crate::{config::Config, };
+use crate::config::Config;
 
 #[derive(thiserror::Error, Debug)]
 pub enum SystemInfoError {
@@ -153,7 +153,8 @@ impl SystemInfoGetter {
             return Err(SystemInfoError::CommandFailed(output.status).into());
         }
 
-        let output = String::from_utf8(output.stdout).change_context(SystemInfoError::InvalidOutput)?;
+        let output =
+            String::from_utf8(output.stdout).change_context(SystemInfoError::InvalidOutput)?;
 
         Ok(CommandOutput {
             name: format!("{} {}", cmd, args.join(" ")),

@@ -7,7 +7,6 @@ pub type QuitSender = oneshot::Sender<()>;
 /// Receiver only used for quit request message receiving.
 pub type QuitReceiver = oneshot::Receiver<()>;
 
-
 pub trait ContextExt: Context + Sized {
     #[track_caller]
     fn report(self) -> Report<Self> {

@@ -3,7 +3,11 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use axum::{extract::ConnectInfo, middleware::Next, response::{Response, IntoResponse}};
+use axum::{
+    extract::ConnectInfo,
+    middleware::Next,
+    response::{IntoResponse, Response},
+};
 use headers::{Header, HeaderValue};
 use hyper::{header, Request};
 use utoipa::{
@@ -11,9 +15,11 @@ use utoipa::{
     Modify,
 };
 
-use crate::{server::{update::UpdateError, client::ApiError, build::BuildError, info::SystemInfoError}, config::GetConfigError};
-
 use super::GetConfig;
+use crate::{
+    config::GetConfigError,
+    server::{build::BuildError, client::ApiError, info::SystemInfoError, update::UpdateError},
+};
 
 /// If true then password has been guessed and manager API is now locked.
 static API_SECURITY_LOCK: AtomicBool = AtomicBool::new(false);
@@ -93,7 +99,6 @@ impl Modify for SecurityApiTokenDefault {
         }
     }
 }
-
 
 #[allow(non_camel_case_types)]
 pub enum StatusCode {

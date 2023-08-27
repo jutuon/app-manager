@@ -11,7 +11,6 @@ use url::Url;
 
 use super::GetConfigError;
 
-
 pub const CONFIG_FILE_NAME: &str = "manager_config.toml";
 
 pub const DEFAULT_CONFIG_FILE_TEXT: &str = r#"
@@ -90,7 +89,6 @@ pub struct ConfigFile {
     pub socket: SocketConfig,
 
     // Optional configs
-
     pub server_encryption_keys: Option<Vec<ServerEncryptionKey>>,
     pub secure_storage: Option<SecureStorageConfig>,
     pub reboot_if_needed: Option<RebootIfNeededConfig>,
@@ -105,7 +103,8 @@ impl ConfigFile {
     pub fn save_default(dir: impl AsRef<Path>) -> Result<(), ConfigFileError> {
         let file_path =
             Self::default_config_file_path(dir).change_context(ConfigFileError::SaveDefault)?;
-        let mut file = std::fs::File::create(file_path).change_context(ConfigFileError::SaveDefault)?;
+        let mut file =
+            std::fs::File::create(file_path).change_context(ConfigFileError::SaveDefault)?;
         file.write_all(DEFAULT_CONFIG_FILE_TEXT.as_bytes())
             .change_context(ConfigFileError::SaveDefault)?;
         Ok(())
@@ -188,7 +187,7 @@ pub struct SoftwareUpdateProviderConfig {
     /// directory will be moved next to the original dir with postfix
     /// "-old" when backend is updated. If there is already a directory
     /// with that name, it will be deleted.
-    pub backend_data_reset_dir: Option<PathBuf>
+    pub backend_data_reset_dir: Option<PathBuf>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

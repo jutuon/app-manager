@@ -5,7 +5,7 @@ use std::process::ExitStatus;
 use error_stack::{Result, ResultExt};
 use tokio::process::Command;
 
-use crate::{config::Config, };
+use crate::config::Config;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ControllerError {

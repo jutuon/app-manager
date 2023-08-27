@@ -5,12 +5,12 @@ use axum::{
     Json,
 };
 use manager_model::{
-    DataEncryptionKey, DownloadType, DownloadTypeQueryParam, RebootQueryParam, ServerNameText,
-    SoftwareInfo, SoftwareOptionsQueryParam, SystemInfo, SystemInfoList, ResetDataQueryParam,
+    DataEncryptionKey, DownloadType, DownloadTypeQueryParam, RebootQueryParam, ResetDataQueryParam,
+    ServerNameText, SoftwareInfo, SoftwareOptionsQueryParam, SystemInfo, SystemInfoList,
 };
-use tracing::{info};
+use tracing::info;
 
-use super::{GetApiManager, GetBuildManager, GetConfig, GetUpdateManager, utils::StatusCode};
+use super::{utils::StatusCode, GetApiManager, GetBuildManager, GetConfig, GetUpdateManager};
 use crate::server::{build::BuildDirCreator, info::SystemInfoGetter, update::UpdateDirCreator};
 
 pub const PATH_GET_ENCRYPTION_KEY: &str = "/manager_api/encryption_key/:server";
@@ -87,14 +87,18 @@ pub async fn get_latest_software<S: GetConfig + GetApiManager>(
             client,
         );
         let data = match download.download_type {
-            DownloadType::Info => state
-                .api_manager()
-                .get_latest_build_info_raw(software.software_options)
-                .await?,
-            DownloadType::EncryptedBinary => state
-                .api_manager()
-                .get_latest_encrypted_software_binary(software.software_options)
-                .await?,
+            DownloadType::Info => {
+                state
+                    .api_manager()
+                    .get_latest_build_info_raw(software.software_options)
+                    .await?
+            }
+            DownloadType::EncryptedBinary => {
+                state
+                    .api_manager()
+                    .get_latest_encrypted_software_binary(software.software_options)
+                    .await?
+            }
         };
         Ok(data)
     } else {
@@ -204,8 +208,7 @@ pub async fn get_software_info<S: GetConfig>(
 ) -> Result<Json<SoftwareInfo>, StatusCode> {
     info!("Get current software info received from {}.", client,);
 
-    let info =
-        UpdateDirCreator::current_software(state.config()).await?;
+    let info = UpdateDirCreator::current_software(state.config()).await?;
     Ok(info.into())
 }
 
@@ -254,9 +257,6 @@ pub async fn get_system_info_all<S: GetConfig + GetApiManager>(
 ) -> Result<Json<SystemInfoList>, StatusCode> {
     info!("Get all system infos received from {}.", client,);
 
-    let info = SystemInfoGetter::system_info_all(
-        state.config(),
-        &state.api_manager()
-    ).await?;
+    let info = SystemInfoGetter::system_info_all(state.config(), &state.api_manager()).await?;
     Ok(info.into())
 }

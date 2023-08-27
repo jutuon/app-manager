@@ -1,8 +1,8 @@
 //! Config given as command line arguments
 
-use std::{process::exit};
+use std::process::exit;
 
-use clap::{arg, command, Parser, FromArgMatches, Args};
+use clap::{arg, command, Args, FromArgMatches, Parser};
 use manager_model::SoftwareOptions;
 use url::Url;
 
@@ -40,7 +40,12 @@ pub struct ApiClientMode {
     #[arg(short = 'k', long, default_value = "password", value_name = "KEY")]
     pub api_key: String,
     /// API URL for accessing the manager API
-    #[arg(short = 'u', long, default_value = "http://localhost:5000", value_name = "URL")]
+    #[arg(
+        short = 'u',
+        long,
+        default_value = "http://localhost:5000",
+        value_name = "URL"
+    )]
     pub api_url: Url,
 
     #[command(subcommand)]
@@ -50,15 +55,15 @@ pub struct ApiClientMode {
 #[derive(Parser, Debug, Clone)]
 pub enum ApiCommand {
     EncryptionKey {
-        encryption_key_name: String
+        encryption_key_name: String,
     },
     LatestBuildInfo {
         #[arg(value_enum)]
-        software: SoftwareOptions
+        software: SoftwareOptions,
     },
     RequestBuildSoftware {
         #[arg(value_enum)]
-        software: SoftwareOptions
+        software: SoftwareOptions,
     },
     RequestUpdateSoftware {
         #[arg(value_enum)]
@@ -66,7 +71,7 @@ pub enum ApiCommand {
         #[arg(short, long)]
         reboot: bool,
         #[arg(long)]
-        reset_data: bool
+        reset_data: bool,
     },
     SystemInfoAll,
     SystemInfo,
