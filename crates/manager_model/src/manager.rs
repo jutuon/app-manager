@@ -1,3 +1,4 @@
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
@@ -20,7 +21,7 @@ pub struct SoftwareOptionsQueryParam {
     pub software_options: SoftwareOptions,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize, ToSchema, ValueEnum)]
 pub enum SoftwareOptions {
     Manager,
     Backend,

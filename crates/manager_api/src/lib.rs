@@ -21,7 +21,7 @@ use manager_api_client::{
     },
     manual_additions::get_latest_software_fixed,
 };
-use manager_model::{BuildInfo, CommandOutput, DataEncryptionKey, SoftwareOptions, SystemInfo, SystemInfoList, SoftwareInfo};
+use manager_model::{BuildInfo, CommandOutput, DataEncryptionKey, SoftwareOptions, SystemInfo, SystemInfoList, SoftwareInfo, ResetDataQueryParam};
 
 pub struct ManagerApi;
 
@@ -146,6 +146,7 @@ impl ManagerApi {
         configuration: &Configuration,
         options: SoftwareOptions,
         reboot: bool,
+        reset_data: ResetDataQueryParam,
     ) -> Result<(), Error<PostRequestSoftwareUpdateError>> {
         let converted_options = match options {
             SoftwareOptions::Manager => manager_api_client::models::SoftwareOptions::Manager,

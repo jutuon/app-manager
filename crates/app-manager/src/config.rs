@@ -10,10 +10,10 @@ use rustls_pemfile::{certs, rsa_private_keys};
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tracing::{info, log::warn};
 
-use self::file::{
+use self::{file::{
     ConfigFile, SecureStorageConfig, RebootIfNeededConfig, ServerEncryptionKey,
     SocketConfig, SoftwareBuilderConfig, SoftwareUpdateProviderConfig, SystemInfoConfig,
-};
+}, args::ArgsConfig};
 
 
 pub mod args;
@@ -117,8 +117,7 @@ impl Config {
     }
 }
 
-pub fn get_config() -> Result<Config, GetConfigError> {
-    let _args_config = args::get_config();
+pub fn get_config(_args: ArgsConfig) -> Result<Config, GetConfigError> {
 
     let current_dir = std::env::current_dir().change_context(GetConfigError::GetWorkingDir)?;
     let file_config =
