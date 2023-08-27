@@ -9,6 +9,7 @@ docs/DownloadType.md
 docs/DownloadTypeQueryParam.md
 docs/ManagerApi.md
 docs/RebootQueryParam.md
+docs/ResetDataQueryParam.md
 docs/ServerNameText.md
 docs/SoftwareInfo.md
 docs/SoftwareOptions.md
@@ -26,6 +27,7 @@ src/models/download_type.rs
 src/models/download_type_query_param.rs
 src/models/mod.rs
 src/models/reboot_query_param.rs
+src/models/reset_data_query_param.rs
 src/models/server_name_text.rs
 src/models/software_info.rs
 src/models/software_options.rs

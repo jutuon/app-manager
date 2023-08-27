@@ -291,8 +291,8 @@ pub async fn post_request_build_software(configuration: &configuration::Configur
     }
 }
 
-/// Request software update.  Manager will update the requested software and reboot the computer as soon as possible if specified.
-pub async fn post_request_software_update(configuration: &configuration::Configuration, software_options: SoftwareOptions, reboot: bool) -> Result<(), Error<PostRequestSoftwareUpdateError>> {
+/// Request software update.  Manager will update the requested software and reboot the computer as soon as possible if specified.  Software's current data storage can be resetted. This will remove or move the data in the data storage. If this does not have effect the software does not support reset_data query parameter or resetting the data storage has been disabled from app-manager config file.
+pub async fn post_request_software_update(configuration: &configuration::Configuration, software_options: SoftwareOptions, reboot: bool, reset_data: bool) -> Result<(), Error<PostRequestSoftwareUpdateError>> {
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
@@ -302,6 +302,7 @@ pub async fn post_request_software_update(configuration: &configuration::Configu
 
     local_var_req_builder = local_var_req_builder.query(&[("software_options", &software_options.to_string())]);
     local_var_req_builder = local_var_req_builder.query(&[("reboot", &reboot.to_string())]);
+    local_var_req_builder = local_var_req_builder.query(&[("reset_data", &reset_data.to_string())]);
     if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
         local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
     }

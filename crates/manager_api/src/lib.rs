@@ -153,7 +153,7 @@ impl ManagerApi {
             SoftwareOptions::Backend => manager_api_client::models::SoftwareOptions::Backend,
         };
 
-        post_request_software_update(configuration, converted_options, reboot).await
+        post_request_software_update(configuration, converted_options, reboot, reset_data.reset_data).await
     }
 
      pub async fn software_info(

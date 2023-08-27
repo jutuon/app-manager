@@ -188,10 +188,10 @@ Name | Type | Description  | Required | Notes
 
 ## post_request_software_update
 
-> post_request_software_update(software_options, reboot)
+> post_request_software_update(software_options, reboot, reset_data)
 Request software update.
 
-Request software update.  Manager will update the requested software and reboot the computer as soon as possible if specified.
+Request software update.  Manager will update the requested software and reboot the computer as soon as possible if specified.  Software's current data storage can be resetted. This will remove or move the data in the data storage. If this does not have effect the software does not support reset_data query parameter or resetting the data storage has been disabled from app-manager config file.
 
 ### Parameters
 
@@ -200,6 +200,7 @@ Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **software_options** | [**SoftwareOptions**](.md) |  | [required] |
 **reboot** | **bool** |  | [required] |
+**reset_data** | **bool** |  | [required] |
 
 ### Return type
 

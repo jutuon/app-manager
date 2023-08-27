@@ -10,6 +10,8 @@ pub mod download_type_query_param;
 pub use self::download_type_query_param::DownloadTypeQueryParam;
 pub mod reboot_query_param;
 pub use self::reboot_query_param::RebootQueryParam;
+pub mod reset_data_query_param;
+pub use self::reset_data_query_param::ResetDataQueryParam;
 pub mod server_name_text;
 pub use self::server_name_text::ServerNameText;
 pub mod software_info;

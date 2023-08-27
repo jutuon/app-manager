@@ -42,6 +42,7 @@ Class | Method | HTTP request | Description
  - [DownloadType](docs/DownloadType.md)
  - [DownloadTypeQueryParam](docs/DownloadTypeQueryParam.md)
  - [RebootQueryParam](docs/RebootQueryParam.md)
+ - [ResetDataQueryParam](docs/ResetDataQueryParam.md)
  - [ServerNameText](docs/ServerNameText.md)
  - [SoftwareInfo](docs/SoftwareInfo.md)
  - [SoftwareOptions](docs/SoftwareOptions.md)
