@@ -3,6 +3,10 @@ CARGO_CRATE_ARGS = 	-p manager_api \
 					-p manager_model \
 					-p app-manager
 
+# Default rule
+run:
+	RUST_LOG=debug cargo run --bin app-manager
+
 fmt:
 	cargo +nightly fmt $(CARGO_CRATE_ARGS)
 fix:
