@@ -60,6 +60,17 @@ impl PrivateRoutes {
                 }),
             )
             .route(
+                api::manager::PATH_POST_RQUEST_RESTART_OR_RESET_BACKEND,
+                post({
+                    let state = self.state.clone();
+                    move |param1, param2| {
+                        api::manager::post_request_restart_or_reset_backend(
+                            param1, param2, state,
+                        )
+                    }
+                }),
+            )
+            .route(
                 api::manager::PATH_GET_SOFTWARE_INFO,
                 get({
                     let state = self.state.clone();

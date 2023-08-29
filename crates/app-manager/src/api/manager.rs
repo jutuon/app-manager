@@ -156,10 +156,12 @@ pub const PATH_POST_RQUEST_SOFTWARE_UPDATE: &str = "/manager_api/request_softwar
 /// Manager will update the requested software and reboot the computer as soon
 /// as possible if specified.
 ///
-/// Software's current data storage can be resetted. This will remove or move
-/// the data in the data storage. If this does not have effect the software does
-/// not support reset_data query parameter or resetting the data storage has been
-/// disabled from app-manager config file.
+/// Software's current data storage can be resetted. This will move
+/// the data in the data storage to another location waiting for deletion.
+/// The deletetion will happen when the next data reset happens.
+/// The selected software must support data reset_data query parameter.
+/// Resetting the data storage can only work if
+/// it is configured from app-manager config file.
 #[utoipa::path(
     post,
     path = "/manager_api/request_software_update",
@@ -185,6 +187,42 @@ pub async fn post_request_software_update<S: GetConfig + GetUpdateManager>(
     state
         .update_manager()
         .send_update_request(software.software_options, reboot.reboot, reset_data)
+        .await?;
+
+    Ok(())
+}
+
+pub const PATH_POST_RQUEST_RESTART_OR_RESET_BACKEND: &str =
+    "/manager_api/request_restart_or_reset_backend";
+
+/// Restart or reset backend.
+///
+/// Restarts backend process. Optionally backend data storage can be reset
+/// also. The data reset will work as described in request_software_update
+/// request documentation.
+#[utoipa::path(
+    post,
+    path = "/manager_api/request_restart_or_reset_backend",
+    params(ResetDataQueryParam),
+    responses(
+        (status = 200, description = "Restart or reset request received"),
+        (status = 500, description = "Internal server error."),
+    ),
+    security(("api_key" = [])),
+)]
+pub async fn post_request_restart_or_reset_backend<S: GetConfig + GetUpdateManager>(
+    Query(reset_data): Query<ResetDataQueryParam>,
+    ConnectInfo(client): ConnectInfo<SocketAddr>,
+    state: S,
+) -> Result<(), StatusCode> {
+    info!(
+        "Backend restart request received from {}. reset_data {:?}",
+        client, reset_data.reset_data,
+    );
+
+    state
+        .update_manager()
+        .send_restart_backend_request(reset_data)
         .await?;
 
     Ok(())

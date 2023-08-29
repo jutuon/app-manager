@@ -3,10 +3,10 @@
 use std::{
     path::{Path, PathBuf},
     process::ExitStatus,
-    sync::{atomic::Ordering, Arc},
+    sync::{atomic::{Ordering, AtomicBool}, Arc},
 };
 
-use error_stack::{Result, ResultExt};
+use error_stack::{Result, ResultExt, FutureExt};
 use manager_model::{BuildInfo, ResetDataQueryParam, SoftwareInfo, SoftwareOptions};
 use tokio::{process::Command, sync::mpsc, task::JoinHandle};
 use tracing::{info, warn};
@@ -15,7 +15,7 @@ use super::{
     build::BuildDirCreator,
     client::{ApiClient, ApiManager},
     reboot::{RebootManagerHandle, REBOOT_ON_NEXT_CHECK},
-    ServerQuitWatcher,
+    ServerQuitWatcher, backend_controller::BackendController,
 };
 use crate::{
     config::{file::SoftwareUpdateProviderConfig, Config},
@@ -80,6 +80,12 @@ pub enum UpdateError {
 
     #[error("Reset data directory missing file name")]
     ResetDataDirectoryNoFileName,
+
+    #[error("Stop backend failed")]
+    StopBackendFailed,
+
+    #[error("Start backend failed")]
+    StartBackendFailed,
 }
 
 #[derive(Debug)]
@@ -107,6 +113,9 @@ pub enum UpdateManagerMessage {
         reset_data: ResetDataQueryParam,
         software: SoftwareOptions,
     },
+    RestartBackend {
+        reset_data: ResetDataQueryParam,
+    },
 }
 
 #[derive(Debug)]
@@ -126,6 +135,19 @@ impl UpdateManagerHandle {
                 force_reboot,
                 reset_data,
                 software,
+            })
+            .change_context(UpdateError::UpdateManagerNotAvailable)?;
+
+        Ok(())
+    }
+
+    pub async fn send_restart_backend_request(
+        &self,
+        reset_data: ResetDataQueryParam,
+    ) -> Result<(), UpdateError> {
+        self.sender
+            .try_send(UpdateManagerMessage::RestartBackend {
+                reset_data,
             })
             .change_context(UpdateError::UpdateManagerNotAvailable)?;
 
@@ -205,6 +227,19 @@ impl UpdateManager {
                 }
                 Err(e) => {
                     warn!("Software update failed. Error: {:?}", e);
+                }
+            },
+            UpdateManagerMessage::RestartBackend {
+                reset_data,
+            } => match self
+                .restart_backend(reset_data)
+                .await
+            {
+                Ok(()) => {
+                    info!("Backend restart finished");
+                }
+                Err(e) => {
+                    warn!("Backend restart failed. Error: {:?}", e);
                 }
             },
         }
@@ -524,6 +559,26 @@ impl UpdateManager {
         self.config
             .software_update_provider()
             .ok_or(UpdateError::SoftwareUpdaterConfigMissing.into())
+    }
+
+    pub async fn restart_backend(
+        &self,
+        reset_data: ResetDataQueryParam,
+    ) -> Result<(), UpdateError> {
+        let backend_controller =
+            BackendController::new(&self.config);
+
+        backend_controller.stop_backend()
+            .await
+            .change_context(UpdateError::StopBackendFailed)?;
+
+        if reset_data.reset_data {
+            self.reset_data(SoftwareOptions::Backend).await?;
+        }
+
+        backend_controller.start_backend()
+            .await
+            .change_context(UpdateError::StartBackendFailed)
     }
 }
 

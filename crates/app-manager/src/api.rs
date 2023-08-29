@@ -26,10 +26,11 @@ pub const PATH_PREFIX: &str = "/api/v1/";
         manager::get_encryption_key,
         manager::get_software_info,
         manager::get_latest_software,
-        manager::post_request_build_software,
-        manager::post_request_software_update,
         manager::get_system_info,
         manager::get_system_info_all,
+        manager::post_request_build_software,
+        manager::post_request_software_update,
+        manager::post_request_restart_or_reset_backend,
     ),
     components(schemas(
         model::DataEncryptionKey,
