@@ -139,6 +139,8 @@ impl AppServer {
                     _ = tokio::time::sleep(Duration::from_secs(60*60)) => {} // check again in an hour
                 }
             }
+        } else {
+            info!("Encrypted storage is disabled");
         }
 
         // Build new version if needed
