@@ -14,7 +14,7 @@ use tokio::{process::Command, sync::mpsc, task::JoinHandle};
 use tracing::{info, warn};
 
 use super::ServerQuitWatcher;
-use crate::config::{file::SoftwareBuilderConfig, Config};
+use crate::{config::{file::SoftwareBuilderConfig, Config}, utils::{InProgressSender, InProgressChannel, InProgressReceiver}};
 
 pub const GPG_KEY_NAME: &str = "app-manager-software-builder";
 
@@ -53,8 +53,8 @@ pub enum BuildError {
     #[error("Invalid input")]
     InvalidInput,
 
-    #[error("Build manager is not available")]
-    BuildManagerNotAvailable,
+    #[error("Send message failed")]
+    SendMessageFailed,
 }
 
 pub struct BinaryBuildInfoOutput(String);
@@ -63,7 +63,7 @@ pub struct BinaryBuildInfoOutput(String);
 pub struct BuildManagerQuitHandle {
     task: JoinHandle<()>,
     // Make sure that Receiver works until the end of the task.
-    _sender: mpsc::Sender<BuildManagerMessage>,
+    _sender: InProgressSender<BuildManagerMessage>,
 }
 
 impl BuildManagerQuitHandle {
@@ -77,7 +77,7 @@ impl BuildManagerQuitHandle {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum BuildManagerMessage {
     BuildNewBackendVersion,
     BuildNewManagerVersion,
@@ -85,40 +85,37 @@ pub enum BuildManagerMessage {
 
 #[derive(Debug)]
 pub struct BuildManagerHandle {
-    sender: mpsc::Sender<BuildManagerMessage>,
+    sender: InProgressSender<BuildManagerMessage>,
 }
 
 impl BuildManagerHandle {
     pub async fn send_build_request(&self, software: SoftwareOptions) -> Result<(), BuildError> {
         match software {
             SoftwareOptions::Manager => {
-                self.sender
-                    .try_send(BuildManagerMessage::BuildNewManagerVersion)
-                    .change_context(BuildError::BuildManagerNotAvailable)?;
+                self.send_message(BuildManagerMessage::BuildNewManagerVersion).await
             }
             SoftwareOptions::Backend => {
-                self.sender
-                    .try_send(BuildManagerMessage::BuildNewBackendVersion)
-                    .change_context(BuildError::BuildManagerNotAvailable)?;
+                self.send_message(BuildManagerMessage::BuildNewBackendVersion).await
             }
         }
-
-        Ok(())
     }
 
     pub async fn send_build_new_backend_version(&self) -> Result<(), BuildError> {
-        self.sender
-            .try_send(BuildManagerMessage::BuildNewBackendVersion)
-            .change_context(BuildError::BuildManagerNotAvailable)?;
+        self.send_message(BuildManagerMessage::BuildNewBackendVersion).await
+    }
 
-        Ok(())
+    pub async fn send_message(&self, message: BuildManagerMessage) -> Result<(), BuildError> {
+        self.sender
+            .send_message(message)
+            .await
+            .change_context(BuildError::SendMessageFailed)
     }
 }
 
 #[derive(Debug)]
 pub struct BuildManager {
     config: Arc<Config>,
-    receiver: mpsc::Receiver<BuildManagerMessage>,
+    receiver: InProgressReceiver<BuildManagerMessage>,
 }
 
 impl BuildManager {
@@ -126,17 +123,17 @@ impl BuildManager {
         config: Arc<Config>,
         quit_notification: ServerQuitWatcher,
     ) -> (BuildManagerQuitHandle, BuildManagerHandle) {
-        let (sender, receiver) = mpsc::channel(1);
+        let (sender, receiver) = InProgressChannel::new();
 
         let manager = Self { config, receiver };
 
         let task = tokio::spawn(manager.run(quit_notification));
 
-        let handle = BuildManagerHandle { sender };
+        let handle = BuildManagerHandle { sender: sender.clone() };
 
         let quit_handle = BuildManagerQuitHandle {
             task,
-            _sender: handle.sender.clone(),
+            _sender: sender,
         };
 
         (quit_handle, handle)
@@ -145,14 +142,23 @@ impl BuildManager {
     pub async fn run(mut self, mut quit_notification: ServerQuitWatcher) {
         loop {
             tokio::select! {
-                message = self.receiver.recv() => {
-                    match message {
+                result = self.receiver.is_new_message_available() => {
+                    match result {
+                        Ok(()) => (),
+                        Err(e) => {
+                            warn!("Build manager channel broken. Error: {:?}", e);
+                            return;
+                        }
+                    }
+
+                    let container = self.receiver.lock_message_container().await;
+
+                    match container.get_message() {
                         Some(message) => {
                             self.handle_message(message).await;
                         }
                         None => {
-                            warn!("Build manager channel closed");
-                            return;
+                            warn!("Unexpected empty container");
                         }
                     }
                 }
@@ -163,7 +169,7 @@ impl BuildManager {
         }
     }
 
-    pub async fn handle_message(&self, message: BuildManagerMessage) {
+    pub async fn handle_message(&self, message: &BuildManagerMessage) {
         match message {
             BuildManagerMessage::BuildNewBackendVersion => {
                 info!("Building backend version");

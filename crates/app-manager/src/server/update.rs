@@ -8,7 +8,7 @@ use std::{
 
 use error_stack::{Result, ResultExt, FutureExt};
 use manager_model::{BuildInfo, ResetDataQueryParam, SoftwareInfo, SoftwareOptions};
-use tokio::{process::Command, sync::mpsc, task::JoinHandle};
+use tokio::{process::Command, sync::{mpsc, Mutex}, task::JoinHandle};
 use tracing::{info, warn};
 
 use super::{
@@ -19,7 +19,7 @@ use super::{
 };
 use crate::{
     config::{file::SoftwareUpdateProviderConfig, Config},
-    utils::ContextExt,
+    utils::{ContextExt, InProgressSender, InProgressReceiver, InProgressChannel},
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -63,8 +63,8 @@ pub enum UpdateError {
     #[error("Invalid input")]
     InvalidInput,
 
-    #[error("Update manager is not available")]
-    UpdateManagerNotAvailable,
+    #[error("Send message failed")]
+    SendMessageFailed,
 
     #[error("Software updater related config is missing")]
     SoftwareUpdaterConfigMissing,
@@ -92,7 +92,7 @@ pub enum UpdateError {
 pub struct UpdateManagerQuitHandle {
     task: JoinHandle<()>,
     // Make sure Receiver works until the manager quits.
-    _sender: mpsc::Sender<UpdateManagerMessage>,
+    _sender: InProgressSender<UpdateManagerMessage>,
 }
 
 impl UpdateManagerQuitHandle {
@@ -106,7 +106,7 @@ impl UpdateManagerQuitHandle {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum UpdateManagerMessage {
     UpdateSoftware {
         force_reboot: bool,
@@ -118,9 +118,8 @@ pub enum UpdateManagerMessage {
     },
 }
 
-#[derive(Debug)]
 pub struct UpdateManagerHandle {
-    sender: mpsc::Sender<UpdateManagerMessage>,
+    sender: InProgressSender<UpdateManagerMessage>,
 }
 
 impl UpdateManagerHandle {
@@ -130,28 +129,29 @@ impl UpdateManagerHandle {
         force_reboot: bool,
         reset_data: ResetDataQueryParam,
     ) -> Result<(), UpdateError> {
-        self.sender
-            .try_send(UpdateManagerMessage::UpdateSoftware {
-                force_reboot,
-                reset_data,
-                software,
-            })
-            .change_context(UpdateError::UpdateManagerNotAvailable)?;
-
-        Ok(())
+        let message = UpdateManagerMessage::UpdateSoftware {
+            force_reboot,
+            reset_data,
+            software,
+        };
+        self.send_message(message).await
     }
 
     pub async fn send_restart_backend_request(
         &self,
         reset_data: ResetDataQueryParam,
     ) -> Result<(), UpdateError> {
-        self.sender
-            .try_send(UpdateManagerMessage::RestartBackend {
-                reset_data,
-            })
-            .change_context(UpdateError::UpdateManagerNotAvailable)?;
+        let message = UpdateManagerMessage::RestartBackend {
+            reset_data,
+        };
+        self.send_message(message).await
+    }
 
-        Ok(())
+    async fn send_message(&self, message: UpdateManagerMessage) -> Result<(), UpdateError> {
+        self.sender
+            .send_message(message)
+            .await
+            .change_context(UpdateError::SendMessageFailed)
     }
 }
 
@@ -159,7 +159,7 @@ impl UpdateManagerHandle {
 pub struct UpdateManager {
     config: Arc<Config>,
     api_client: Arc<ApiClient>,
-    receiver: mpsc::Receiver<UpdateManagerMessage>,
+    receiver: InProgressReceiver<UpdateManagerMessage>,
     reboot_manager_handle: RebootManagerHandle,
 }
 
@@ -170,7 +170,7 @@ impl UpdateManager {
         api_client: Arc<ApiClient>,
         reboot_manager_handle: RebootManagerHandle,
     ) -> (UpdateManagerQuitHandle, UpdateManagerHandle) {
-        let (sender, receiver) = mpsc::channel(1);
+        let (sender, receiver) = InProgressChannel::new();
 
         let manager = Self {
             config,
@@ -181,11 +181,13 @@ impl UpdateManager {
 
         let task = tokio::spawn(manager.run(quit_notification));
 
-        let handle = UpdateManagerHandle { sender };
+        let handle = UpdateManagerHandle {
+            sender: sender.clone(),
+        };
 
         let quit_handle = UpdateManagerQuitHandle {
             task,
-            _sender: handle.sender.clone(),
+            _sender: sender,
         };
 
         (quit_handle, handle)
@@ -194,14 +196,23 @@ impl UpdateManager {
     pub async fn run(mut self, mut quit_notification: ServerQuitWatcher) {
         loop {
             tokio::select! {
-                message = self.receiver.recv() => {
-                    match message {
+                result = self.receiver.is_new_message_available() => {
+                    match result {
+                        Ok(()) => (),
+                        Err(e) => {
+                            warn!("Update manager channel broken. Error: {:?}", e);
+                            return;
+                        }
+                    }
+
+                    let container = self.receiver.lock_message_container().await;
+
+                    match container.get_message() {
                         Some(message) => {
                             self.handle_message(message).await;
                         }
                         None => {
-                            warn!("Update manager channel closed");
-                            return;
+                            warn!("Unexpected empty container");
                         }
                     }
                 }
@@ -212,8 +223,8 @@ impl UpdateManager {
         }
     }
 
-    pub async fn handle_message(&self, message: UpdateManagerMessage) {
-        match message {
+    pub async fn handle_message(&self, message: &UpdateManagerMessage) {
+        match message.clone() {
             UpdateManagerMessage::UpdateSoftware {
                 force_reboot,
                 reset_data,
