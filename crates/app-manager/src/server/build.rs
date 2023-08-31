@@ -655,7 +655,7 @@ impl BuildDirCreator {
                     info!("Build directory created");
                 }
                 Err(e) => {
-                    warn!("Build directory creation failed. Error: {:?}", e);
+                    warn!("Build directory creation failed. Error: {:?}, Directory: {}", e, build_dir.display());
                 }
             }
         }

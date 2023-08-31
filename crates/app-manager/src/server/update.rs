@@ -606,7 +606,7 @@ impl UpdateDirCreator {
                     info!("Update directory created");
                 }
                 Err(e) => {
-                    warn!("Update directory creation failed. Error: {:?}", e);
+                    warn!("Update directory creation failed. Error: {:?}, Directory: {}", e, build_dir.display());
                 }
             }
         }
