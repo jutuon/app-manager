@@ -54,6 +54,20 @@ pub async fn handle_api_client_mode(args: ApiClientMode) -> Result<(), ApiError>
                 software, reboot, reset_data
             );
         }
+        ApiCommand::RequestRestartBackend {
+            reset_data,
+        } => {
+            ManagerApi::restart_backend(
+                &configuration,
+                ResetDataQueryParam { reset_data },
+            )
+            .await
+            .change_context(ApiError::ApiRequest)?;
+            println!(
+                "Restart backend requested, reset_data: {}",
+                reset_data
+            );
+        }
         ApiCommand::SystemInfoAll => {
             let info = ManagerApi::system_info_all(&configuration)
                 .await

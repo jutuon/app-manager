@@ -10,14 +10,14 @@ pub use manager_api_client::apis::{
     configuration::{ApiKey, Configuration},
     manager_api::{
         GetEncryptionKeyError, GetSoftwareInfoError, GetSystemInfoAllError, GetSystemInfoError,
-        PostRequestBuildSoftwareError, PostRequestSoftwareUpdateError,
+        PostRequestBuildSoftwareError, PostRequestSoftwareUpdateError, PostRequestRestartOrResetBackendError,
     },
     Error,
 };
 use manager_api_client::{
     apis::manager_api::{
         get_encryption_key, get_software_info, get_system_info_all, post_request_build_software,
-        post_request_software_update, GetLatestSoftwareError,
+        post_request_software_update, GetLatestSoftwareError, post_request_restart_or_reset_backend,
     },
     manual_additions::get_latest_software_fixed,
 };
@@ -182,5 +182,12 @@ impl ManagerApi {
         Ok(SoftwareInfo {
             current_software: info_vec,
         })
+    }
+
+    pub async fn restart_backend(
+        configuration: &Configuration,
+        reset_data: ResetDataQueryParam,
+    ) -> Result<(), Error<PostRequestRestartOrResetBackendError>> {
+        post_request_restart_or_reset_backend(configuration, reset_data.reset_data).await
     }
 }

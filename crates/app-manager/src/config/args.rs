@@ -73,6 +73,10 @@ pub enum ApiCommand {
         #[arg(long)]
         reset_data: bool,
     },
+    RequestRestartBackend {
+        #[arg(long)]
+        reset_data: bool,
+    },
     SystemInfoAll,
     SystemInfo,
     SoftwareInfo,

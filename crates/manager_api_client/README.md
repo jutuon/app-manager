@@ -31,6 +31,7 @@ Class | Method | HTTP request | Description
 *ManagerApi* | [**get_system_info**](docs/ManagerApi.md#get_system_info) | **GET** /manager_api/system_info | Get system info about current operating system, hardware and software.
 *ManagerApi* | [**get_system_info_all**](docs/ManagerApi.md#get_system_info_all) | **GET** /manager_api/system_info_all | Get system info about current operating system, hardware and software.
 *ManagerApi* | [**post_request_build_software**](docs/ManagerApi.md#post_request_build_software) | **POST** /manager_api/request_build_software | Request building the latest software from git.
+*ManagerApi* | [**post_request_restart_or_reset_backend**](docs/ManagerApi.md#post_request_restart_or_reset_backend) | **POST** /manager_api/request_restart_or_reset_backend | Restart or reset backend.
 *ManagerApi* | [**post_request_software_update**](docs/ManagerApi.md#post_request_software_update) | **POST** /manager_api/request_software_update | Request software update.
 
 
