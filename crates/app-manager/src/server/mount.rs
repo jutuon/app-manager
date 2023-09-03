@@ -9,7 +9,7 @@ use std::{
 use error_stack::{Result, ResultExt};
 use manager_model::DataEncryptionKey;
 use tokio::{io::AsyncWriteExt, process::Command};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use super::app::AppState;
 use crate::{
@@ -57,7 +57,22 @@ impl MountManager {
             .api_manager()
             .get_encryption_key()
             .await
-            .change_context(MountError::GetKeyFailed)?;
+            .change_context(MountError::GetKeyFailed);
+
+        let key = match key {
+            Ok(key) => key,
+            Err(e) => {
+                error!("Getting encryption key failed: {}", e);
+                if let Some(text) = &storage_config.encryption_key_text {
+                    warn!("Using local encryption key. This shouldn't be done in production!");
+                    DataEncryptionKey {
+                        key: text.to_string(),
+                    }
+                } else {
+                    return Err(MountError::GetKeyFailed.into())
+                }
+            }
+        };
 
         self.change_password_if_needed(key.clone()).await?;
 

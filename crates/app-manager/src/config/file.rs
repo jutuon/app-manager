@@ -27,6 +27,10 @@ public_api = "127.0.0.1:5000"
 # manager_base_url = "http://127.0.0.1:5000"
 # encryption_key_name = "test-server"
 # availability_check_path = "/app-secure-storage/app"
+# -------- Optional --------
+# Fall back to local encryption key if the manager instance is not available.
+# Should not be used in production.
+# encryption_key_text = ""
 
 # [[server_encryption_keys]]
 # name = "test-server"
@@ -172,6 +176,11 @@ pub struct SecureStorageConfig {
     /// Path to file or directory which is used to
     /// check if the secure storage is mounted or not.
     pub availability_check_path: PathBuf,
+
+    /// Optional. If the manager instance is not available, this key
+    /// will be used for opening the encryption.
+    /// Should not be used in production.
+    pub encryption_key_text: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
