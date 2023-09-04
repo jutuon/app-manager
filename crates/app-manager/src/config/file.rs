@@ -161,7 +161,7 @@ impl ServerEncryptionKey {
         tokio::fs::read_to_string(self.key_path.as_path())
             .await
             .change_context(GetConfigError::EncryptionKeyLoadingFailed)
-            .map(|key| DataEncryptionKey { key })
+            .map(|key| DataEncryptionKey { key: key.trim().to_string() })
     }
 }
 
