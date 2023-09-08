@@ -53,7 +53,7 @@ public_api = "127.0.0.1:5000"
 # backend_download_git_address = "git repository ssh or https address"
 # backend_branch = "main"
 # backend_binary = "app-backend"
-# backend_pre_build_script = "/path/to/script/app-backend-pre-build.sh" # Optional
+# backend_pre_build_script = "/app-secure-storage/app/app-manager-storage/build/backend/manager-pre-build-script.sh" # Optional
 
 # [reboot_if_needed]
 # time = "12:00"
