@@ -143,24 +143,6 @@ impl AppServer {
             info!("Encrypted storage is disabled");
         }
 
-        // Build new version if needed
-
-        if self.config.software_builder().is_some() {
-            match app
-                .state()
-                .build_manager()
-                .send_build_new_backend_version()
-                .await
-            {
-                Ok(()) => {
-                    info!("Build requested");
-                }
-                Err(e) => {
-                    warn!("Build request sending failed. Error: {:?}", e);
-                }
-            }
-        }
-
         // Start backend if it is installed
 
         if let Some(update_config) = self.config.software_update_provider() {
