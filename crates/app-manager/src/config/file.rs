@@ -38,7 +38,7 @@ public_api = "127.0.0.1:5000"
 
 # [software_update_provider]
 # manager_base_url = "http://127.0.0.1:5000"
-# binary_signing_public_key = "binary-key.pub"
+# binary_decrypting_key_path = "binary-key.gpg" # Optional
 # manager_install_location = "/home/app/binaries/app-manager"
 # backend_install_location = "/app-secure-storage/app/binaries/app-backend"
 # backend_data_reset_dir = "/path/to/backend/data" # Optional
@@ -188,8 +188,8 @@ pub struct SoftwareUpdateProviderConfig {
     /// Manager instance URL which is used to
     /// check if new software is available.
     pub manager_base_url: Url,
-    /// GPG public key
-    pub binary_signing_public_key: PathBuf,
+    /// GPG private key. Import this key to GPG.
+    pub binary_decrypting_key_path: Option<PathBuf>,
     pub manager_install_location: PathBuf,
     pub backend_install_location: PathBuf,
     /// Optional. Enableds data reset support for backend. This

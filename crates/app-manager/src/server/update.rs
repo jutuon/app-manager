@@ -329,7 +329,7 @@ impl UpdateManager {
             .await
             .change_context(UpdateError::FileWritingFailed)?;
 
-        self.import_gpg_public_key().await?;
+        self.import_gpg_key_if_configured().await?;
         let binary_path = update_dir.join(software.to_str());
         self.decrypt_encrypted_binary(&encrypted_binary_path, &binary_path)
             .await?;
@@ -465,9 +465,15 @@ impl UpdateManager {
         Ok(())
     }
 
-    pub async fn import_gpg_public_key(&self) -> Result<(), UpdateError> {
+    pub async fn import_gpg_key_if_configured(&self) -> Result<(), UpdateError> {
+        let key_path = &self.updater_config()?.binary_decrypting_key_path.as_ref();
+        let key_path = if let Some(key) = key_path {
+            key
+        } else {
+            return Ok(());
+        };
+
         info!("Importing GPG key");
-        let key_path = &self.updater_config()?.binary_signing_public_key;
         let status: ExitStatus = Command::new("gpg")
             .arg("--import")
             .arg(&key_path)
