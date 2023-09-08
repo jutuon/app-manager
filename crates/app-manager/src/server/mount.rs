@@ -60,24 +60,42 @@ impl MountManager {
             .change_context(MountError::GetKeyFailed);
 
         let key = match key {
-            Ok(key) => key,
+            Ok(key) => Some(key),
             Err(e) => {
                 error!("Getting encryption key failed: {}", e);
                 if let Some(text) = &storage_config.encryption_key_text {
                     warn!("Using local encryption key. This shouldn't be done in production!");
-                    DataEncryptionKey {
+                    Some(DataEncryptionKey {
                         key: text.to_string(),
-                    }
+                    })
                 } else {
-                    return Err(MountError::GetKeyFailed.into())
+                    None
                 }
             }
         };
 
-        self.change_password_if_needed(key.clone()).await?;
+        match key {
+            Some(key) => {
+                if self.is_default_password().await? {
+                    info!("Default password is used. Password will be changed.");
+                    self.change_default_password(key.clone()).await?;
+                }
+                self.mount_secure_storage(key).await
+            }
+            None => {
+                if self.is_default_password().await? {
+                    warn!("Mounting secure storage using default password");
+                    self.mount_secure_storage(DataEncryptionKey {
+                        key: "password\n".to_string(),
+                    }).await
+                } else {
+                    Err(MountError::GetKeyFailed.report())
+                }
+            },
+        }
+    }
 
-        info!("Mounting secure storage");
-
+    pub async fn mount_secure_storage(&self, key: DataEncryptionKey) -> Result<(), MountError> {
         let mut c = Command::new("sudo")
             .arg(self.config.script_locations().open_encryption())
             .stdin(Stdio::piped())
@@ -136,7 +154,7 @@ impl MountManager {
         }
     }
 
-    async fn change_password_if_needed(&self, key: DataEncryptionKey) -> Result<(), MountError> {
+    async fn is_default_password(&self) -> Result<bool, MountError> {
         let c = Command::new("sudo")
             .arg(
                 self.config
@@ -146,40 +164,39 @@ impl MountManager {
             .status()
             .await
             .change_context(MountError::ProcessStartFailed)?;
-        if c.success() {
-            info!("Default password is used. Password will be changed.");
-            let mut c = Command::new("sudo")
-                .arg(self.config.script_locations().change_encryption_password())
-                .stdin(Stdio::piped())
-                .spawn()
-                .change_context(MountError::ProcessStartFailed)?;
 
-            if let Some(stdin) = c.stdin.as_mut() {
-                stdin
-                    .write_all(key.key.as_bytes())
-                    .await
-                    .change_context(MountError::ProcessStdinFailed)?;
-                stdin
-                    .shutdown()
-                    .await
-                    .change_context(MountError::ProcessStdinFailed)?;
-            }
+        Ok(c.success())
+    }
 
-            let status = c
-                .wait()
+    async fn change_default_password(&self, key: DataEncryptionKey) -> Result<(), MountError> {
+        let mut c = Command::new("sudo")
+            .arg(self.config.script_locations().change_encryption_password())
+            .stdin(Stdio::piped())
+            .spawn()
+            .change_context(MountError::ProcessStartFailed)?;
+
+        if let Some(stdin) = c.stdin.as_mut() {
+            stdin
+                .write_all(key.key.as_bytes())
                 .await
-                .change_context(MountError::ProcessStartFailed)?;
+                .change_context(MountError::ProcessStdinFailed)?;
+            stdin
+                .shutdown()
+                .await
+                .change_context(MountError::ProcessStdinFailed)?;
+        }
 
-            if status.success() {
-                info!("Password change was successfull.");
-                Ok(())
-            } else {
-                error!("Password change failed.");
-                Err(MountError::CommandFailed(status).report())
-            }
-        } else {
-            info!("Encryption password is not the default password.");
+        let status = c
+            .wait()
+            .await
+            .change_context(MountError::ProcessStartFailed)?;
+
+        if status.success() {
+            info!("Password change was successfull.");
             Ok(())
+        } else {
+            error!("Password change failed.");
+            Err(MountError::CommandFailed(status).report())
         }
     }
 }
