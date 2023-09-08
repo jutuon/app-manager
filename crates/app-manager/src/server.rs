@@ -143,6 +143,18 @@ impl AppServer {
             info!("Encrypted storage is disabled");
         }
 
+        // Try to create storage directory if it doesn't exist
+        if !self.config.storage_dir().exists() {
+            match tokio::fs::create_dir(self.config.storage_dir()).await {
+                Ok(()) => {
+                    info!("Storage directory created");
+                }
+                Err(e) => {
+                    error!("Failed to create storage directory. Error: {:?}", e);
+                }
+            }
+        }
+
         // Start backend if it is installed
 
         if let Some(update_config) = self.config.software_update_provider() {
