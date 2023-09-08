@@ -161,41 +161,21 @@ impl AppServer {
             }
         }
 
-        // Install latest backend binary if it is not installed
+        // Start backend if it is installed
 
         if let Some(update_config) = self.config.software_update_provider() {
             if !update_config.backend_install_location.exists() {
-                info!("Backend is not installed. Downloading latest software");
-
-                match app
-                    .state()
-                    .update_manager()
-                    .send_update_request(
-                        SoftwareOptions::Backend,
-                        false,
-                        ResetDataQueryParam { reset_data: false },
-                    )
-                    .await
-                {
+                info!("Starting backend");
+                match BackendController::new(&self.config).start_backend().await {
                     Ok(()) => {
-                        info!("Backend installation requested");
+                        info!("Backend started");
                     }
                     Err(e) => {
-                        warn!("Backend installation requesting failed. Error: {:?}", e);
+                        warn!("Backend start failed. Error: {:?}", e);
                     }
                 }
-            }
-
-            // Start backend
-
-            info!("Starting backend");
-            match BackendController::new(&self.config).start_backend().await {
-                Ok(()) => {
-                    info!("Backend started");
-                }
-                Err(e) => {
-                    warn!("Backend start failed. Error: {:?}", e);
-                }
+            } else {
+                warn!("Backend starting failed. Backend is not installed");
             }
         }
 
