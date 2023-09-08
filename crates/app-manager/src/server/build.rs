@@ -229,7 +229,7 @@ impl BuildManager {
     pub async fn git_refresh_backend_if_needed(&self) -> Result<(), BuildError> {
         let builder_config = self.builder_config()?;
         self.git_refresh_if_needed(
-            &builder_config.backend_download_key_path,
+            builder_config.backend_download_key_path.as_deref(),
             &builder_config.backend_download_git_address,
             &self.backend_repository().as_os_str().to_string_lossy(),
             self.backend_repository_name(),
@@ -246,7 +246,7 @@ impl BuildManager {
         let builder_config = self.builder_config()?;
 
         self.git_refresh_if_needed(
-            &builder_config.manager_download_key_path,
+            builder_config.manager_download_key_path.as_deref(),
             &builder_config.manager_download_git_address,
             &self.manager_repository().as_os_str().to_string_lossy(),
             self.manager_repository_name(),
@@ -261,7 +261,7 @@ impl BuildManager {
 
     pub async fn git_refresh_if_needed(
         &self,
-        download_key: &Path,
+        download_key: Option<&Path>,
         repository_address: &str,
         repository_path: &str,
         repository_name: &str,
@@ -270,10 +270,12 @@ impl BuildManager {
         pre_build_script: Option<&Path>,
     ) -> Result<(), BuildError> {
         // Avoid injecting additional args to SSH command.
-        validate_path(&download_key)?;
+        if let Some(download_key) = download_key {
+            validate_path(&download_key)?;
+        }
 
         Self::git_clone_repository_if_needed(
-            &download_key.as_os_str().to_string_lossy(),
+            download_key.map(|path| path.as_os_str().to_string_lossy().to_string()),
             &repository_address,
             &repository_path,
             repository_name,
@@ -308,7 +310,7 @@ impl BuildManager {
     }
 
     pub async fn git_clone_repository_if_needed(
-        key: &str,
+        ssh_key_path: Option<String>,
         repository_address: &str,
         repository_path: &str,
         repository_name: &str,
@@ -319,11 +321,15 @@ impl BuildManager {
         }
 
         info!("Cloning {} repository", repository_name);
-        let status = Command::new("git")
-            .arg("clone")
-            .arg("-c")
-            .arg(format!("core.sshCommand=ssh -i {}", key))
-            .arg("-b")
+        let mut cmd = Command::new("git");
+            cmd.arg("clone");
+
+        if let Some(ssh_key_path) = ssh_key_path {
+            cmd.arg("-c")
+                .arg(format!("core.sshCommand=ssh -i {}", ssh_key_path));
+        }
+
+        let status = cmd.arg("-b")
             .arg(repository_branch)
             .arg(repository_address)
             .arg(repository_path)

@@ -44,13 +44,13 @@ public_api = "127.0.0.1:5000"
 # backend_data_reset_dir = "/path/to/backend/data" # Optional
 
 # [software_builder]
-# manager_download_key_path = "app-manager.key"
-# manager_download_git_address = "git repository ssh address"
+# manager_download_key_path = "app-manager-ssh.key" # Optional
+# manager_download_git_address = "git repository ssh or https address"
 # manager_branch = "main"
 # manager_binary = "app-manager"
 # manager_pre_build_script = "/path/to/script/app-manager-pre-build.sh" # Optional
-# backend_download_key_path = "app-backend.key"
-# backend_download_git_address = "git repository ssh address"
+# backend_download_key_path = "app-backend-ssh.key" # Optional
+# backend_download_git_address = "git repository ssh or https address"
 # backend_branch = "main"
 # backend_binary = "app-backend"
 # backend_pre_build_script = "/path/to/script/app-backend-pre-build.sh" # Optional
@@ -201,13 +201,15 @@ pub struct SoftwareUpdateProviderConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SoftwareBuilderConfig {
-    pub manager_download_key_path: PathBuf,
+    /// Optional SSH key address for downloading the software.
+    pub manager_download_key_path: Option<PathBuf>,
     pub manager_download_git_address: String,
     pub manager_branch: String,
     pub manager_binary: String,
     /// Optional. Working dir of the script is repository root.
     pub manager_pre_build_script: Option<PathBuf>,
-    pub backend_download_key_path: PathBuf,
+    /// Optional SSH key address for downloading the software.
+    pub backend_download_key_path: Option<PathBuf>,
     pub backend_download_git_address: String,
     pub backend_branch: String,
     pub backend_binary: String,
