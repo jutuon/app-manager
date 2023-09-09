@@ -158,7 +158,7 @@ impl AppServer {
         // Start backend if it is installed
 
         if let Some(update_config) = self.config.software_update_provider() {
-            if !update_config.backend_install_location.exists() {
+            if update_config.backend_install_location.exists() {
                 info!("Starting backend");
                 match BackendController::new(&self.config).start_backend().await {
                     Ok(()) => {
