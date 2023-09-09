@@ -11,7 +11,7 @@ use manager_model::DataEncryptionKey;
 use tokio::{io::AsyncWriteExt, process::Command};
 use tracing::{error, info, warn};
 
-use super::app::AppState;
+use super::{app::AppState, state::StateStorage};
 use crate::{
     api::GetApiManager,
     config::{file::SecureStorageConfig, Config},
@@ -33,14 +33,47 @@ pub enum MountError {
     CommandFailed(ExitStatus),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MountMode {
+    NotMounted,
+    MountedWithRemoteKey,
+    MountedWithLocalKey,
+    MountedWithDefaultKey,
+    /// Secure storage was mounted before app-manager
+    /// started, so key is unknown.
+    MountedWithUnknownKey,
+}
+
+#[derive(Debug, Clone)]
+pub struct MountState {
+    mode: MountMode,
+}
+
+impl MountState {
+    pub fn new() -> Self {
+        Self {
+            mode: MountMode::NotMounted,
+        }
+    }
+
+    pub fn mode(&self) -> MountMode {
+        self.mode
+    }
+
+    fn set_mode(&mut self, mode: MountMode) {
+        self.mode = mode;
+    }
+}
+
 pub struct MountManager {
     config: Arc<Config>,
     app_state: AppState,
+    state: Arc<StateStorage>,
 }
 
 impl MountManager {
-    pub fn new(config: Arc<Config>, app_state: AppState) -> Self {
-        Self { config, app_state }
+    pub fn new(config: Arc<Config>, app_state: AppState, state: Arc<StateStorage>) -> Self {
+        Self { config, app_state, state }
     }
 
     pub async fn mount_if_needed(
@@ -49,6 +82,7 @@ impl MountManager {
     ) -> Result<(), MountError> {
         if storage_config.availability_check_path.exists() {
             info!("Secure storage is already mounted");
+            self.state.modify(|s| s.mount_state.set_mode(MountMode::MountedWithUnknownKey)).await;
             return Ok(());
         }
 
@@ -59,17 +93,17 @@ impl MountManager {
             .await
             .change_context(MountError::GetKeyFailed);
 
-        let key = match key {
-            Ok(key) => Some(key),
+        let (key, mut mode) = match key {
+        Ok(key) => (Some(key), MountMode::MountedWithRemoteKey),
             Err(e) => {
                 error!("Getting encryption key failed: {}", e);
                 if let Some(text) = &storage_config.encryption_key_text {
                     warn!("Using local encryption key. This shouldn't be done in production!");
-                    Some(DataEncryptionKey {
+                    (Some(DataEncryptionKey {
                         key: text.to_string(),
-                    })
+                    }), MountMode::MountedWithLocalKey)
                 } else {
-                    None
+                    (None, MountMode::NotMounted)
                 }
             }
         };
@@ -80,19 +114,24 @@ impl MountManager {
                     info!("Default password is used. Password will be changed.");
                     self.change_default_password(key.clone()).await?;
                 }
-                self.mount_secure_storage(key).await
+                self.mount_secure_storage(key).await?;
             }
             None => {
                 if self.is_default_password().await? {
                     warn!("Mounting secure storage using default password");
                     self.mount_secure_storage(DataEncryptionKey {
                         key: "password\n".to_string(),
-                    }).await
+                    }).await?;
+                    mode = MountMode::MountedWithDefaultKey;
                 } else {
-                    Err(MountError::GetKeyFailed.report())
+                    return Err(MountError::GetKeyFailed.report());
                 }
             },
-        }
+        };
+
+        self.state.modify(|s| s.mount_state.set_mode(mode)).await;
+
+        Ok(())
     }
 
     pub async fn mount_secure_storage(&self, key: DataEncryptionKey) -> Result<(), MountError> {

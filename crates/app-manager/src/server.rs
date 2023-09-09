@@ -31,7 +31,7 @@ use crate::{
     },
     server::{
         app::App, backend_controller::BackendController, build::BuildManager, client::ApiClient,
-        mount::MountManager,
+        mount::MountManager, state::StateStorage,
     },
 };
 
@@ -43,6 +43,7 @@ pub mod info;
 pub mod mount;
 pub mod reboot;
 pub mod update;
+pub mod state;
 
 /// Drop this when quit starts
 pub type ServerQuitHandle = broadcast::Sender<()>;
@@ -81,14 +82,15 @@ impl AppServer {
         let (build_manager_quit_handle, build_manager_handle) =
             BuildManager::new(self.config.clone(), server_quit_watcher.resubscribe());
 
-        // Start reboot manager
-
-        let (reboot_manager_quit_handle, reboot_manager_handle) =
-            reboot::RebootManager::new(self.config.clone(), server_quit_watcher.resubscribe());
-
         // Create API client
 
         let api_client: Arc<ApiClient> = ApiClient::new(&self.config).unwrap().into();
+        let state: Arc<StateStorage> = StateStorage::new().into();
+
+        // Start reboot manager
+
+        let (reboot_manager_quit_handle, reboot_manager_handle) =
+            reboot::RebootManager::new(self.config.clone(), api_client.clone(), state.clone(), server_quit_watcher.resubscribe());
 
         // Start update manager
 
@@ -117,7 +119,7 @@ impl AppServer {
 
         // Mount encrypted storage if needed
 
-        let mount_manager = MountManager::new(self.config.clone(), app.state());
+        let mount_manager = MountManager::new(self.config.clone(), app.state(), state.clone());
 
         if let Some(encryption_key_provider) = self.config.secure_storage_config() {
             loop {

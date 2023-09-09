@@ -15,8 +15,8 @@ use time::{OffsetDateTime, Time, UtcOffset};
 use tokio::{process::Command, sync::mpsc, task::JoinHandle, time::sleep};
 use tracing::{info, warn};
 
-use super::ServerQuitWatcher;
-use crate::config::Config;
+use super::{ServerQuitWatcher, client::{ApiClient, ApiManager}, state::StateStorage};
+use crate::{config::Config, server::mount::MountMode};
 
 /// If this file exists reboot system at some point. Works at least on Ubuntu.
 const REBOOT_REQUIRED_PATH: &str = "/var/run/reboot-required";
@@ -48,6 +48,9 @@ pub enum RebootError {
 
     #[error("Invalid output")]
     InvalidOutput,
+
+    #[error("Getting encryption key failed")]
+    GetKeyFailed,
 }
 
 #[derive(Debug)]
@@ -89,20 +92,23 @@ impl RebootManagerHandle {
     }
 }
 
-#[derive(Debug)]
 pub struct RebootManager {
     config: Arc<Config>,
+    api_client: Arc<ApiClient>,
+    state: Arc<StateStorage>,
     receiver: mpsc::Receiver<RebootManagerMessage>,
 }
 
 impl RebootManager {
     pub fn new(
         config: Arc<Config>,
+        api_client: Arc<ApiClient>,
+        state: Arc<StateStorage>,
         quit_notification: ServerQuitWatcher,
     ) -> (RebootManagerQuitHandle, RebootManagerHandle) {
         let (sender, receiver) = mpsc::channel(1);
 
-        let manager = Self { config, receiver };
+        let manager = Self { config, receiver, api_client, state };
 
         let task = tokio::spawn(manager.run(quit_notification));
 
@@ -201,6 +207,19 @@ impl RebootManager {
     }
 
     pub async fn run_reboot(&self) -> Result<(), RebootError> {
+        match self.state.get(|s| s.mount_state.mode()).await {
+            MountMode::MountedWithRemoteKey => {
+                info!("Remote encryption key detected. Checking encryption key availability before rebooting");
+                self
+                    .api_manager()
+                    .get_encryption_key()
+                    .await
+                    .change_context(RebootError::GetKeyFailed)?;
+                info!("Remote encryption key is available");
+            }
+            _ => (),
+        }
+
         info!("Rebooting system");
         let status = Command::new("sudo")
             .arg("reboot")
@@ -282,5 +301,9 @@ impl RebootManager {
             .change_context(RebootError::InvalidOutput)?;
 
         Ok(hours * multiplier)
+    }
+
+    fn api_manager(&self) -> ApiManager<'_> {
+        ApiManager::new(&self.config, &self.api_client)
     }
 }
