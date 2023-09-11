@@ -126,7 +126,7 @@ impl SystemInfoGetter {
     }
 
     async fn run_journalctl(service: &str) -> Result<CommandOutput, SystemInfoError> {
-        Self::run_cmd_with_args("journalctl", &["--no-pager", "-n", "10", "-u", service]).await
+        Self::run_cmd_with_args("journalctl", &["--no-pager", "-n", "20", "-u", service]).await
     }
 
     /// Run print-logs.sh script which prints some logs requiring sudo.
