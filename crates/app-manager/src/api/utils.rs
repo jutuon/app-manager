@@ -4,9 +4,7 @@ use std::{
 };
 
 use axum::{
-    extract::ConnectInfo,
-    middleware::Next,
-    response::{IntoResponse, Response},
+    body::Body, extract::ConnectInfo, middleware::Next, response::{IntoResponse, Response}
 };
 use headers::{Header, HeaderValue};
 use hyper::{header, Request};
@@ -27,11 +25,11 @@ static API_SECURITY_LOCK: AtomicBool = AtomicBool::new(false);
 pub const API_KEY_HEADER_STR: &str = "x-api-key";
 pub static API_KEY_HEADER: header::HeaderName = header::HeaderName::from_static(API_KEY_HEADER_STR);
 
-pub async fn authenticate_with_api_key<T, S: GetConfig>(
+pub async fn authenticate_with_api_key<S: GetConfig>(
     state: S,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    req: Request<T>,
-    next: Next<T>,
+    req: Request<Body>,
+    next: Next,
 ) -> Result<Response, StatusCode> {
     let header = req
         .headers()
