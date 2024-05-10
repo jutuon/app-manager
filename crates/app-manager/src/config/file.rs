@@ -65,9 +65,9 @@ public_api = "127.0.0.1:5000"
 # manager_base_url = "http://127.0.0.1:5000"
 
 # [tls]
-# public_api_cert = "server_config/public_api.cert"
-# public_api_key = "server_config/public_api.key"
-# root_certificate = "server_config/public_api.key"
+# public_api_cert = "tls/server.crt"
+# public_api_key = "tls/server.key"
+# root_certificate = "tls/root.crt"
 "#;
 
 #[derive(thiserror::Error, Debug)]
