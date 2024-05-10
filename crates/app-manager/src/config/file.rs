@@ -183,6 +183,8 @@ pub struct SecureStorageConfig {
     pub encryption_key_text: Option<String>,
 }
 
+// TODO: Make build and update configs generic. Does API need changes?
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SoftwareUpdateProviderConfig {
     /// Manager instance URL which is used to

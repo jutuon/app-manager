@@ -3,8 +3,11 @@
 use std::process::exit;
 
 use clap::{arg, command, Args, Parser};
+use error_stack::{Result, ResultExt};
 use manager_model::SoftwareOptions;
 use url::Url;
+
+use super::{file::ConfigFile, GetConfigError};
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -36,9 +39,10 @@ pub enum AppMode {
 
 #[derive(Args, Debug, Clone)]
 pub struct ApiClientMode {
-    /// API key for accessing the manager API
+    /// API key for accessing the manager API. If not present, config file
+    /// api_key is tried to accessed from current directory.
     #[arg(short = 'k', long, default_value = "password", value_name = "KEY")]
-    pub api_key: String,
+    api_key: Option<String>,
     /// API URL for accessing the manager API
     #[arg(
         short = 'u',
@@ -50,6 +54,20 @@ pub struct ApiClientMode {
 
     #[command(subcommand)]
     pub api_command: ApiCommand,
+}
+
+impl ApiClientMode {
+    pub fn api_key(&self) -> Result<String, GetConfigError> {
+        if let Some(api_key) = self.api_key.clone() {
+            Ok(api_key)
+        } else {
+            let current_dir = std::env::current_dir().change_context(GetConfigError::GetWorkingDir)?;
+            let file_config =
+                super::file::ConfigFile::load(current_dir).change_context(GetConfigError::LoadFileError)?;
+
+            Ok(file_config.api_key)
+        }
+    }
 }
 
 #[derive(Parser, Debug, Clone)]
