@@ -271,6 +271,7 @@ impl RebootManager {
         Ok(now)
     }
 
+    /// Get UTC offset hours which depends on system's timezone setting.
     pub async fn get_utc_offset_hours() -> Result<i8, RebootError> {
         let output = Command::new("date")
             .arg("+%z")
@@ -286,19 +287,27 @@ impl RebootManager {
         let offset =
             std::str::from_utf8(&output.stdout).change_context(RebootError::InvalidOutput)?;
 
+        // Determine is the offset negative or positive
         let multiplier = match offset.chars().nth(0) {
             Some('-') => -1,
             _ => 1,
         };
 
-        let hours = offset
+        let hours_number_string = offset
             .chars()
-            .skip(1)
+            .skip(1) // Skip '+' or '-' character
             .take(2)
-            .collect::<String>()
-            .trim_start_matches('0')
-            .parse::<i8>()
-            .change_context(RebootError::InvalidOutput)?;
+            .collect::<String>();
+        let hours_number_str = hours_number_string
+            .trim_start_matches('0');
+
+        let hours = if hours_number_str.is_empty() {
+            0
+        } else {
+            hours_number_str
+                .parse::<i8>()
+                .change_context(RebootError::InvalidOutput)?
+        };
 
         Ok(hours * multiplier)
     }
