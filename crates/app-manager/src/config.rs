@@ -30,6 +30,8 @@ pub enum GetConfigError {
     LoadFileError,
     #[error("Load config file")]
     LoadConfig,
+    #[error("Check config file existance error")]
+    CheckConfigFileExistanceError,
 
     #[error("TLS config is required when debug mode is off")]
     TlsConfigMissing,
@@ -42,6 +44,9 @@ pub enum GetConfigError {
 
     #[error("Missing script")]
     ScriptLocationError,
+
+    #[error("Invalid constant")]
+    InvalidConstant,
 }
 
 #[derive(Debug)]
@@ -122,7 +127,7 @@ impl Config {
 pub fn get_config(_args: ArgsConfig) -> Result<Config, GetConfigError> {
     let current_dir = std::env::current_dir().change_context(GetConfigError::GetWorkingDir)?;
     let file_config =
-        file::ConfigFile::load(current_dir).change_context(GetConfigError::LoadFileError)?;
+        file::ConfigFile::save_default_if_not_exist_and_load(current_dir).change_context(GetConfigError::LoadFileError)?;
 
     let public_api_tls_config = match file_config.tls.clone() {
         Some(tls_config) => Some(Arc::new(generate_server_config(

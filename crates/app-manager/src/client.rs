@@ -14,7 +14,9 @@ use crate::{
 pub async fn handle_api_client_mode(args: ApiClientMode) -> Result<(), ApiError> {
     let api_key = args.api_key()
         .change_context(ApiError::MissingConfiguration)?;
-    let configuration = create_configration(api_key, args.api_url)?;
+    let api_url = args.api_url()
+        .change_context(ApiError::MissingConfiguration)?;
+    let configuration = create_configration(api_key, api_url)?;
 
     match args.api_command {
         ApiCommand::EncryptionKey {

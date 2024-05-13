@@ -114,10 +114,18 @@ impl ConfigFile {
         Ok(())
     }
 
-    pub fn load(dir: impl AsRef<Path>) -> Result<ConfigFile, ConfigFileError> {
+    pub fn save_default_if_not_exist_and_load(dir: impl AsRef<Path>) -> Result<ConfigFile, ConfigFileError> {
+        Self::load(dir, true)
+    }
+
+    pub fn load_config(dir: impl AsRef<Path>) -> Result<ConfigFile, ConfigFileError> {
+        Self::load(dir, false)
+    }
+
+    fn load(dir: impl AsRef<Path>, save_default: bool) -> Result<ConfigFile, ConfigFileError> {
         let file_path =
             Self::default_config_file_path(&dir).change_context(ConfigFileError::LoadConfig)?;
-        if !file_path.exists() {
+        if !file_path.exists() && save_default {
             Self::save_default(dir).change_context(ConfigFileError::LoadConfig)?;
         }
 
@@ -132,7 +140,13 @@ impl ConfigFile {
         }
         let mut file_path = dir.as_ref().to_path_buf();
         file_path.push(CONFIG_FILE_NAME);
-        return Ok(file_path);
+        Ok(file_path)
+    }
+
+    pub fn exists(dir: impl AsRef<Path>) -> Result<bool, ConfigFileError> {
+        let file_path =
+            Self::default_config_file_path(&dir).change_context(ConfigFileError::LoadConfig)?;
+        Ok(file_path.exists())
     }
 }
 
