@@ -1,4 +1,4 @@
-use std::{convert::Infallible, future::IntoFuture, net::SocketAddr, pin::Pin, sync::Arc, time::Duration};
+use std::{convert::Infallible, future::IntoFuture, net::{IpAddr, Ipv4Addr, SocketAddr}, pin::Pin, sync::Arc, time::Duration};
 
 use axum::Router;
 use futures::future::poll_fn;
@@ -111,7 +111,7 @@ impl AppServer {
 
         // Start API server
 
-        let server_task = self
+        let (server_task1, server_task2) = self
             .create_public_api_server_task(&mut app, server_quit_watcher.resubscribe())
             .await;
 
@@ -183,9 +183,15 @@ impl AppServer {
         drop(server_quit_handle);
 
         // Wait until all tasks quit
-        server_task
+        server_task1
             .await
             .expect("Manager API server task panic detected");
+
+        if let Some(server_task2) = server_task2 {
+            server_task2
+                .await
+                .expect("Second Manager API server task panic detected");
+        }
 
         build_manager_quit_handle.wait_quit().await;
         reboot_manager_quit_handle.wait_quit().await;
@@ -236,7 +242,7 @@ impl AppServer {
         &self,
         app: &mut App,
         quit_notification: ServerQuitWatcher,
-    ) -> JoinHandle<()> {
+    ) -> (JoinHandle<()>, Option<JoinHandle<()>>) {
         let router = {
             let router = self.create_public_router(app);
             let router = if self.config.debug_mode() {
@@ -244,24 +250,35 @@ impl AppServer {
             } else {
                 router
             };
-            let router = if self.config.debug_mode() {
+            if self.config.debug_mode() {
                 router.route_layer(TraceLayer::new_for_http())
             } else {
                 router
-            };
-            router
+            }
         };
 
         let addr = self.config.socket().public_api;
         info!("Public API is available on {}", addr);
 
-        if let Some(tls_config) = self.config.public_api_tls_config() {
-            self.create_server_task_with_tls(addr, router, tls_config.clone(), quit_notification)
+        let join_handle = if let Some(tls_config) = self.config.public_api_tls_config() {
+            self.create_server_task_with_tls(addr, router.clone(), tls_config.clone(), quit_notification.resubscribe())
                 .await
         } else {
-            self.create_server_task_no_tls(router, addr, "Public API", quit_notification)
+            self.create_server_task_no_tls(router.clone(), addr, "Public API", quit_notification.resubscribe())
                 .await
-        }
+        };
+
+        let second_join_handle = if let Some(port) = self.config.socket().second_public_api_localhost_only_port {
+            let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
+            info!("Public API is available also on {}", addr);
+            let handle = self.create_server_task_no_tls(router, addr, "Second public API", quit_notification)
+                .await;
+            Some(handle)
+        } else {
+            None
+        };
+
+        (join_handle, second_join_handle)
     }
 
     pub async fn create_server_task_with_tls(

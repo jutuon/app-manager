@@ -22,6 +22,8 @@ pub const DEFAULT_CONFIG_FILE_TEXT: &str = r#"
 
 [socket]
 public_api = "127.0.0.1:5000"
+# Second API has no TLS even if it is configured
+# second_public_api_localhost_only_port = 5001
 
 # [secure_storage]
 # manager_base_url = "http://127.0.0.1:5000"
@@ -153,6 +155,7 @@ impl ConfigFile {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SocketConfig {
     pub public_api: SocketAddr,
+    pub second_public_api_localhost_only_port: Option<u16>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
