@@ -47,6 +47,8 @@ pub enum GetConfigError {
 
     #[error("Invalid constant")]
     InvalidConstant,
+    #[error("Certificate file reading failed")]
+    ReadCertificateError,
 }
 
 #[derive(Debug)]

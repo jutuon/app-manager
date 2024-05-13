@@ -5,9 +5,10 @@ use std::{path::PathBuf, process::exit};
 use clap::{arg, command, Args, Parser};
 use error_stack::{Result, ResultExt};
 use manager_model::SoftwareOptions;
+use reqwest::Certificate;
 use url::Url;
 
-use super::{file::ConfigFile, GetConfigError};
+use super::{file::ConfigFile, load_root_certificate, GetConfigError};
 
 const DEFAULT_HTTP_LOCALHOST_URL: &str = "http://localhost:5000";
 const DEFAULT_HTTPS_LOCALHOST_URL: &str = "https://localhost:5000";
@@ -112,7 +113,7 @@ impl ApiClientMode {
             .change_context(GetConfigError::InvalidConstant)
     }
 
-    pub fn root_certificate(&self) -> Result<Option<PathBuf>, GetConfigError> {
+    fn root_certificate_file(&self) -> Result<Option<PathBuf>, GetConfigError> {
         if let Some(root_certificate) = self.root_certificate.clone() {
             return Ok(Some(root_certificate));
         }
@@ -126,6 +127,16 @@ impl ApiClientMode {
                 super::file::ConfigFile::save_default_if_not_exist_and_load(current_dir).change_context(GetConfigError::LoadFileError)?;
 
             Ok(file_config.tls.map(|v| v.root_certificate))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn root_certificate(&self) -> Result<Option<Certificate>, GetConfigError> {
+        if let Some(root_certificate_file) = self.root_certificate_file()? {
+            let cert = load_root_certificate(&root_certificate_file)
+                .change_context(GetConfigError::ReadCertificateError)?;
+            Ok(Some(cert))
         } else {
             Ok(None)
         }

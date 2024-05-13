@@ -4,6 +4,7 @@
 use error_stack::{Result, ResultExt};
 use manager_api::{ApiKey, Configuration, ManagerApi};
 use manager_model::ResetDataQueryParam;
+use reqwest::Certificate;
 use url::Url;
 
 use crate::{
@@ -16,7 +17,13 @@ pub async fn handle_api_client_mode(args: ApiClientMode) -> Result<(), ApiError>
         .change_context(ApiError::MissingConfiguration)?;
     let api_url = args.api_url()
         .change_context(ApiError::MissingConfiguration)?;
-    let configuration = create_configration(api_key, api_url)?;
+    let certificate = args.root_certificate()
+        .change_context(ApiError::MissingConfiguration)?;
+    let configuration = create_configration(
+        api_key,
+        api_url,
+        certificate
+    )?;
 
     match args.api_command {
         ApiCommand::EncryptionKey {
@@ -95,25 +102,31 @@ pub async fn handle_api_client_mode(args: ApiClientMode) -> Result<(), ApiError>
     Ok(())
 }
 
-pub fn create_configration(api_key: String, base_url: Url) -> Result<Configuration, ApiError> {
+pub fn create_configration(
+    api_key: String,
+    base_url: Url,
+    root_certificate: Option<Certificate>,
+) -> Result<Configuration, ApiError> {
     let api_key = ApiKey {
         prefix: None,
         key: api_key,
     };
 
-    let client = reqwest::ClientBuilder::new().tls_built_in_root_certs(false);
-    // TODO: TLS support
-    // if let Some(cert) = config.root_certificate() {
-    //     client = client.add_root_certificate(cert.clone());
-    // }
-
-    let client = client.build().change_context(ApiError::ClientBuildFailed)?;
+    let client = reqwest::ClientBuilder::new()
+        .tls_built_in_root_certs(false);
+    let client = if let Some(cert) = root_certificate {
+        client.add_root_certificate(cert)
+    } else {
+        client
+    }
+        .build()
+        .change_context(ApiError::ClientBuildFailed)?;
 
     let url = base_url.as_str().trim_end_matches('/').to_string();
 
     let configuration = Configuration {
         base_path: url,
-        client: client.clone(),
+        client,
         api_key: Some(api_key.clone()),
         ..Configuration::default()
     };
