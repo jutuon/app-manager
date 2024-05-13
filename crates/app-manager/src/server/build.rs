@@ -454,7 +454,7 @@ impl BuildManager {
         info!("Cargo build {} repository", repository_name);
         let status = Command::new("nice")
             .arg("-n")
-            .arg("20")
+            .arg("19")
             .arg("cargo")
             .arg("build")
             .arg("--bin")
