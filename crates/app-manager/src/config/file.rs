@@ -198,6 +198,9 @@ pub struct SecureStorageConfig {
     /// will be used for opening the encryption.
     /// Should not be used in production.
     pub encryption_key_text: Option<String>,
+
+    /// Optional. Configure timeout for downloading the encryption key.
+    pub key_download_timeout_seconds: Option<u32>
 }
 
 // TODO: Make build and update configs generic. Does API need changes?

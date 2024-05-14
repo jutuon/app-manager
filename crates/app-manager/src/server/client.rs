@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use error_stack::{Result, ResultExt};
 use manager_api::{ApiKey, Configuration, ManagerApi};
@@ -31,6 +31,15 @@ pub enum ApiError {
     MissingConfiguration,
 }
 
+fn base_client_builder(config: &Config) -> reqwest::ClientBuilder {
+    let client = reqwest::ClientBuilder::new().tls_built_in_root_certs(false);
+    if let Some(cert) = config.root_certificate() {
+        client.add_root_certificate(cert.clone())
+    } else {
+        client
+    }
+}
+
 #[derive(Debug)]
 pub struct ApiClient {
     encryption_key_provider: Option<Configuration>,
@@ -45,12 +54,18 @@ impl ApiClient {
             key: config.api_key().to_string(),
         };
 
-        let mut client = reqwest::ClientBuilder::new().tls_built_in_root_certs(false);
-        if let Some(cert) = config.root_certificate() {
-            client = client.add_root_certificate(cert.clone());
-        }
+        let client = base_client_builder(config)
+            .build()
+            .change_context(ApiError::ClientBuildFailed)?;
 
-        let client = client.build().change_context(ApiError::ClientBuildFailed)?;
+        let encryption_key_client = if let Some(timeout_seconds) = config.secure_storage_config().and_then(|v| v.key_download_timeout_seconds) {
+            base_client_builder(config)
+                .timeout(Duration::from_secs(timeout_seconds.into()))
+                .build()
+                .change_context(ApiError::ClientBuildFailed)?
+        } else {
+            client.clone()
+        };
 
         let encryption_key_provider = config.secure_storage_config().map(|url| {
             let url = url
@@ -63,7 +78,7 @@ impl ApiClient {
 
             Configuration {
                 base_path: url,
-                client: client.clone(),
+                client: encryption_key_client,
                 api_key: Some(api_key.clone()),
                 ..Configuration::default()
             }
