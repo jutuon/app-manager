@@ -6,8 +6,8 @@ use std::{
 };
 
 use error_stack::{Result, ResultExt};
-use rustls_pemfile::{certs};
-use tokio_rustls::rustls::{ServerConfig};
+use rustls_pemfile::certs;
+use tokio_rustls::rustls::ServerConfig;
 use tracing::{info, log::warn};
 
 use self::{
@@ -128,8 +128,8 @@ impl Config {
 
 pub fn get_config(_args: ArgsConfig) -> Result<Config, GetConfigError> {
     let current_dir = std::env::current_dir().change_context(GetConfigError::GetWorkingDir)?;
-    let file_config =
-        file::ConfigFile::save_default_if_not_exist_and_load(current_dir).change_context(GetConfigError::LoadFileError)?;
+    let file_config = file::ConfigFile::save_default_if_not_exist_and_load(current_dir)
+        .change_context(GetConfigError::LoadFileError)?;
 
     let public_api_tls_config = match file_config.tls.clone() {
         Some(tls_config) => Some(Arc::new(generate_server_config(
@@ -232,8 +232,7 @@ fn load_root_certificate(cert_path: &Path) -> Result<reqwest::Certificate, GetCo
     let mut cert_iter = all_certs.into_iter();
     let cert = if let Some(cert) = cert_iter.next() {
         let cert = cert.change_context(GetConfigError::CreateTlsConfig)?;
-        reqwest::Certificate::from_der(&cert)
-            .change_context(GetConfigError::CreateTlsConfig)?
+        reqwest::Certificate::from_der(&cert).change_context(GetConfigError::CreateTlsConfig)?
     } else {
         return Err(GetConfigError::CreateTlsConfig).attach_printable("No cert found");
     };
@@ -252,8 +251,7 @@ fn generate_server_config(
     let mut key_reader = BufReader::new(
         std::fs::File::open(key_path).change_context(GetConfigError::CreateTlsConfig)?,
     );
-    let all_keys: Vec<_> =
-        rustls_pemfile::private_key(&mut key_reader)
+    let all_keys: Vec<_> = rustls_pemfile::private_key(&mut key_reader)
         .iter()
         .flatten()
         .map(|v| v.clone_key())
@@ -274,7 +272,9 @@ fn generate_server_config(
         std::fs::File::open(cert_path).change_context(GetConfigError::CreateTlsConfig)?,
     );
 
-    let all_certs: Vec<_> = certs(&mut cert_reader).map(|r| r.map(|c| c.into_owned())).collect();
+    let all_certs: Vec<_> = certs(&mut cert_reader)
+        .map(|r| r.map(|c| c.into_owned()))
+        .collect();
     let mut cert_iter = all_certs.into_iter();
     let cert = if let Some(cert) = cert_iter.next() {
         cert.change_context(GetConfigError::CreateTlsConfig)?

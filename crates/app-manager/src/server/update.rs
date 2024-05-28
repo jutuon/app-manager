@@ -3,23 +3,24 @@
 use std::{
     path::{Path, PathBuf},
     process::ExitStatus,
-    sync::{atomic::{Ordering}, Arc},
+    sync::{atomic::Ordering, Arc},
 };
 
-use error_stack::{Result, ResultExt, FutureExt};
+use error_stack::{FutureExt, Result, ResultExt};
 use manager_model::{BuildInfo, ResetDataQueryParam, SoftwareInfo, SoftwareOptions};
 use tokio::{process::Command, task::JoinHandle};
 use tracing::{info, warn};
 
 use super::{
+    backend_controller::BackendController,
     build::BuildDirCreator,
     client::{ApiClient, ApiManager},
     reboot::{RebootManagerHandle, REBOOT_ON_NEXT_CHECK},
-    ServerQuitWatcher, backend_controller::BackendController,
+    ServerQuitWatcher,
 };
 use crate::{
     config::{file::SoftwareUpdateProviderConfig, Config},
-    utils::{ContextExt, InProgressSender, InProgressReceiver, InProgressChannel},
+    utils::{ContextExt, InProgressChannel, InProgressReceiver, InProgressSender},
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -141,9 +142,7 @@ impl UpdateManagerHandle {
         &self,
         reset_data: ResetDataQueryParam,
     ) -> Result<(), UpdateError> {
-        let message = UpdateManagerMessage::RestartBackend {
-            reset_data,
-        };
+        let message = UpdateManagerMessage::RestartBackend { reset_data };
         self.send_message(message).await
     }
 
@@ -240,19 +239,16 @@ impl UpdateManager {
                     warn!("Software update failed. Error: {:?}", e);
                 }
             },
-            UpdateManagerMessage::RestartBackend {
-                reset_data,
-            } => match self
-                .restart_backend(reset_data)
-                .await
-            {
-                Ok(()) => {
-                    info!("Backend restart finished");
+            UpdateManagerMessage::RestartBackend { reset_data } => {
+                match self.restart_backend(reset_data).await {
+                    Ok(()) => {
+                        info!("Backend restart finished");
+                    }
+                    Err(e) => {
+                        warn!("Backend restart failed. Error: {:?}", e);
+                    }
                 }
-                Err(e) => {
-                    warn!("Backend restart failed. Error: {:?}", e);
-                }
-            },
+            }
         }
     }
 
@@ -582,10 +578,10 @@ impl UpdateManager {
         &self,
         reset_data: ResetDataQueryParam,
     ) -> Result<(), UpdateError> {
-        let backend_controller =
-            BackendController::new(&self.config);
+        let backend_controller = BackendController::new(&self.config);
 
-        backend_controller.stop_backend()
+        backend_controller
+            .stop_backend()
             .await
             .change_context(UpdateError::StopBackendFailed)?;
 
@@ -593,7 +589,8 @@ impl UpdateManager {
             self.reset_data(SoftwareOptions::Backend).await?;
         }
 
-        backend_controller.start_backend()
+        backend_controller
+            .start_backend()
             .await
             .change_context(UpdateError::StartBackendFailed)
     }
@@ -612,7 +609,11 @@ impl UpdateDirCreator {
                     info!("Update directory created");
                 }
                 Err(e) => {
-                    warn!("Update directory creation failed. Error: {:?}, Directory: {}", e, build_dir.display());
+                    warn!(
+                        "Update directory creation failed. Error: {:?}, Directory: {}",
+                        e,
+                        build_dir.display()
+                    );
                 }
             }
         }

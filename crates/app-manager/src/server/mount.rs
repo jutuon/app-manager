@@ -73,7 +73,11 @@ pub struct MountManager {
 
 impl MountManager {
     pub fn new(config: Arc<Config>, app_state: AppState, state: Arc<StateStorage>) -> Self {
-        Self { config, app_state, state }
+        Self {
+            config,
+            app_state,
+            state,
+        }
     }
 
     pub async fn mount_if_needed(
@@ -82,7 +86,9 @@ impl MountManager {
     ) -> Result<(), MountError> {
         if storage_config.availability_check_path.exists() {
             info!("Secure storage is already mounted");
-            self.state.modify(|s| s.mount_state.set_mode(MountMode::MountedWithUnknownKey)).await;
+            self.state
+                .modify(|s| s.mount_state.set_mode(MountMode::MountedWithUnknownKey))
+                .await;
             return Ok(());
         }
 
@@ -94,14 +100,17 @@ impl MountManager {
             .change_context(MountError::GetKeyFailed);
 
         let (key, mut mode) = match key {
-        Ok(key) => (Some(key), MountMode::MountedWithRemoteKey),
+            Ok(key) => (Some(key), MountMode::MountedWithRemoteKey),
             Err(e) => {
                 error!("Getting encryption key failed: {}", e);
                 if let Some(text) = &storage_config.encryption_key_text {
                     warn!("Using local encryption key. This shouldn't be done in production!");
-                    (Some(DataEncryptionKey {
-                        key: text.to_string(),
-                    }), MountMode::MountedWithLocalKey)
+                    (
+                        Some(DataEncryptionKey {
+                            key: text.to_string(),
+                        }),
+                        MountMode::MountedWithLocalKey,
+                    )
                 } else {
                     (None, MountMode::NotMounted)
                 }
@@ -121,12 +130,13 @@ impl MountManager {
                     warn!("Mounting secure storage using default password");
                     self.mount_secure_storage(DataEncryptionKey {
                         key: "password\n".to_string(),
-                    }).await?;
+                    })
+                    .await?;
                     mode = MountMode::MountedWithDefaultKey;
                 } else {
                     return Err(MountError::GetKeyFailed.report());
                 }
-            },
+            }
         };
 
         self.state.modify(|s| s.mount_state.set_mode(mode)).await;

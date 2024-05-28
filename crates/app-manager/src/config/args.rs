@@ -53,21 +53,13 @@ pub struct ApiClientMode {
     /// "http://localhost:5000" is used as the default value.
     /// If config file does not exist, then "https://localhost:5000" is the
     /// default value.
-    #[arg(
-        short = 'u',
-        long,
-        value_name = "URL"
-    )]
+    #[arg(short = 'u', long, value_name = "URL")]
     pub api_url: Option<Url>,
     /// Root certificate for HTTP client. If not present, config file
     /// TLS config is red from current directory. If it exists, then
     /// root certificate value from there is used. If not, then HTTP client
     /// uses system root certificates.
-    #[arg(
-        short = 'c',
-        long,
-        value_name = "FILE"
-    )]
+    #[arg(short = 'c', long, value_name = "FILE")]
     pub root_certificate: Option<PathBuf>,
 
     #[command(subcommand)]
@@ -79,9 +71,10 @@ impl ApiClientMode {
         if let Some(api_key) = self.api_key.clone() {
             Ok(api_key)
         } else {
-            let current_dir = std::env::current_dir().change_context(GetConfigError::GetWorkingDir)?;
-            let file_config =
-                ConfigFile::load_config(current_dir).change_context(GetConfigError::LoadFileError)?;
+            let current_dir =
+                std::env::current_dir().change_context(GetConfigError::GetWorkingDir)?;
+            let file_config = ConfigFile::load_config(current_dir)
+                .change_context(GetConfigError::LoadFileError)?;
 
             Ok(file_config.api_key)
         }
@@ -89,16 +82,16 @@ impl ApiClientMode {
 
     pub fn api_url(&self) -> Result<Url, GetConfigError> {
         if let Some(api_url) = self.api_url.clone() {
-            return Ok(api_url)
+            return Ok(api_url);
         }
 
         let current_dir = std::env::current_dir().change_context(GetConfigError::GetWorkingDir)?;
 
         let url_str = if ConfigFile::exists(&current_dir)
-            .change_context(GetConfigError::CheckConfigFileExistanceError)? {
-
-            let file_config =
-                super::file::ConfigFile::load_config(current_dir).change_context(GetConfigError::LoadFileError)?;
+            .change_context(GetConfigError::CheckConfigFileExistanceError)?
+        {
+            let file_config = super::file::ConfigFile::load_config(current_dir)
+                .change_context(GetConfigError::LoadFileError)?;
 
             if file_config.tls.is_some() {
                 DEFAULT_HTTPS_LOCALHOST_URL
@@ -109,8 +102,7 @@ impl ApiClientMode {
             DEFAULT_HTTPS_LOCALHOST_URL
         };
 
-        Url::parse(url_str)
-            .change_context(GetConfigError::InvalidConstant)
+        Url::parse(url_str).change_context(GetConfigError::InvalidConstant)
     }
 
     fn root_certificate_file(&self) -> Result<Option<PathBuf>, GetConfigError> {
@@ -121,10 +113,11 @@ impl ApiClientMode {
         let current_dir = std::env::current_dir().change_context(GetConfigError::GetWorkingDir)?;
 
         if ConfigFile::exists(&current_dir)
-            .change_context(GetConfigError::CheckConfigFileExistanceError)? {
-
+            .change_context(GetConfigError::CheckConfigFileExistanceError)?
+        {
             let file_config =
-                super::file::ConfigFile::save_default_if_not_exist_and_load(current_dir).change_context(GetConfigError::LoadFileError)?;
+                super::file::ConfigFile::save_default_if_not_exist_and_load(current_dir)
+                    .change_context(GetConfigError::LoadFileError)?;
 
             Ok(file_config.tls.map(|v| v.root_certificate))
         } else {

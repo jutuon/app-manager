@@ -15,7 +15,11 @@ use time::{OffsetDateTime, Time, UtcOffset};
 use tokio::{process::Command, sync::mpsc, task::JoinHandle, time::sleep};
 use tracing::{info, warn};
 
-use super::{ServerQuitWatcher, client::{ApiClient, ApiManager}, state::StateStorage};
+use super::{
+    client::{ApiClient, ApiManager},
+    state::StateStorage,
+    ServerQuitWatcher,
+};
 use crate::{config::Config, server::mount::MountMode};
 
 /// If this file exists reboot system at some point. Works at least on Ubuntu.
@@ -108,7 +112,12 @@ impl RebootManager {
     ) -> (RebootManagerQuitHandle, RebootManagerHandle) {
         let (sender, receiver) = mpsc::channel(1);
 
-        let manager = Self { config, receiver, api_client, state };
+        let manager = Self {
+            config,
+            receiver,
+            api_client,
+            state,
+        };
 
         let task = tokio::spawn(manager.run(quit_notification));
 
@@ -210,8 +219,7 @@ impl RebootManager {
         match self.state.get(|s| s.mount_state.mode()).await {
             MountMode::MountedWithRemoteKey => {
                 info!("Remote encryption key detected. Checking encryption key availability before rebooting");
-                self
-                    .api_manager()
+                self.api_manager()
                     .get_encryption_key()
                     .await
                     .change_context(RebootError::GetKeyFailed)?;
@@ -298,8 +306,7 @@ impl RebootManager {
             .skip(1) // Skip '+' or '-' character
             .take(2)
             .collect::<String>();
-        let hours_number_str = hours_number_string
-            .trim_start_matches('0');
+        let hours_number_str = hours_number_string.trim_start_matches('0');
 
         let hours = if hours_number_str.is_empty() {
             0

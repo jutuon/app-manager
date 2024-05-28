@@ -13,17 +13,16 @@ use crate::{
 };
 
 pub async fn handle_api_client_mode(args: ApiClientMode) -> Result<(), ApiError> {
-    let api_key = args.api_key()
+    let api_key = args
+        .api_key()
         .change_context(ApiError::MissingConfiguration)?;
-    let api_url = args.api_url()
+    let api_url = args
+        .api_url()
         .change_context(ApiError::MissingConfiguration)?;
-    let certificate = args.root_certificate()
+    let certificate = args
+        .root_certificate()
         .change_context(ApiError::MissingConfiguration)?;
-    let configuration = create_configration(
-        api_key,
-        api_url,
-        certificate
-    )?;
+    let configuration = create_configration(api_key, api_url, certificate)?;
 
     match args.api_command {
         ApiCommand::EncryptionKey {
@@ -65,19 +64,11 @@ pub async fn handle_api_client_mode(args: ApiClientMode) -> Result<(), ApiError>
                 software, reboot, reset_data
             );
         }
-        ApiCommand::RequestRestartBackend {
-            reset_data,
-        } => {
-            ManagerApi::restart_backend(
-                &configuration,
-                ResetDataQueryParam { reset_data },
-            )
-            .await
-            .change_context(ApiError::ApiRequest)?;
-            println!(
-                "Restart backend requested, reset_data: {}",
-                reset_data
-            );
+        ApiCommand::RequestRestartBackend { reset_data } => {
+            ManagerApi::restart_backend(&configuration, ResetDataQueryParam { reset_data })
+                .await
+                .change_context(ApiError::ApiRequest)?;
+            println!("Restart backend requested, reset_data: {}", reset_data);
         }
         ApiCommand::SystemInfoAll => {
             let info = ManagerApi::system_info_all(&configuration)
@@ -112,15 +103,14 @@ pub fn create_configration(
         key: api_key,
     };
 
-    let client = reqwest::ClientBuilder::new()
-        .tls_built_in_root_certs(false);
+    let client = reqwest::ClientBuilder::new().tls_built_in_root_certs(false);
     let client = if let Some(cert) = root_certificate {
         client.add_root_certificate(cert)
     } else {
         client
     }
-        .build()
-        .change_context(ApiError::ClientBuildFailed)?;
+    .build()
+    .change_context(ApiError::ClientBuildFailed)?;
 
     let url = base_url.as_str().trim_end_matches('/').to_string();
 

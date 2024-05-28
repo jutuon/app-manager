@@ -116,7 +116,9 @@ impl ConfigFile {
         Ok(())
     }
 
-    pub fn save_default_if_not_exist_and_load(dir: impl AsRef<Path>) -> Result<ConfigFile, ConfigFileError> {
+    pub fn save_default_if_not_exist_and_load(
+        dir: impl AsRef<Path>,
+    ) -> Result<ConfigFile, ConfigFileError> {
         Self::load(dir, true)
     }
 
@@ -178,7 +180,9 @@ impl ServerEncryptionKey {
         tokio::fs::read_to_string(self.key_path.as_path())
             .await
             .change_context(GetConfigError::EncryptionKeyLoadingFailed)
-            .map(|key| DataEncryptionKey { key: key.trim().to_string() })
+            .map(|key| DataEncryptionKey {
+                key: key.trim().to_string(),
+            })
     }
 }
 
@@ -200,7 +204,7 @@ pub struct SecureStorageConfig {
     pub encryption_key_text: Option<String>,
 
     /// Optional. Configure timeout for downloading the encryption key.
-    pub key_download_timeout_seconds: Option<u32>
+    pub key_download_timeout_seconds: Option<u32>,
 }
 
 // TODO: Make build and update configs generic. Does API need changes?

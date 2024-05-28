@@ -14,7 +14,10 @@ use tokio::{process::Command, task::JoinHandle};
 use tracing::{info, warn};
 
 use super::ServerQuitWatcher;
-use crate::{config::{file::SoftwareBuilderConfig, Config}, utils::{InProgressSender, InProgressChannel, InProgressReceiver}};
+use crate::{
+    config::{file::SoftwareBuilderConfig, Config},
+    utils::{InProgressChannel, InProgressReceiver, InProgressSender},
+};
 
 pub const GPG_KEY_NAME: &str = "app-manager-software-builder";
 
@@ -92,16 +95,19 @@ impl BuildManagerHandle {
     pub async fn send_build_request(&self, software: SoftwareOptions) -> Result<(), BuildError> {
         match software {
             SoftwareOptions::Manager => {
-                self.send_message(BuildManagerMessage::BuildNewManagerVersion).await
+                self.send_message(BuildManagerMessage::BuildNewManagerVersion)
+                    .await
             }
             SoftwareOptions::Backend => {
-                self.send_message(BuildManagerMessage::BuildNewBackendVersion).await
+                self.send_message(BuildManagerMessage::BuildNewBackendVersion)
+                    .await
             }
         }
     }
 
     pub async fn send_build_new_backend_version(&self) -> Result<(), BuildError> {
-        self.send_message(BuildManagerMessage::BuildNewBackendVersion).await
+        self.send_message(BuildManagerMessage::BuildNewBackendVersion)
+            .await
     }
 
     pub async fn send_message(&self, message: BuildManagerMessage) -> Result<(), BuildError> {
@@ -129,7 +135,9 @@ impl BuildManager {
 
         let task = tokio::spawn(manager.run(quit_notification));
 
-        let handle = BuildManagerHandle { sender: sender.clone() };
+        let handle = BuildManagerHandle {
+            sender: sender.clone(),
+        };
 
         let quit_handle = BuildManagerQuitHandle {
             task,
@@ -322,14 +330,15 @@ impl BuildManager {
 
         info!("Cloning {} repository", repository_name);
         let mut cmd = Command::new("git");
-            cmd.arg("clone");
+        cmd.arg("clone");
 
         if let Some(ssh_key_path) = ssh_key_path {
             cmd.arg("-c")
                 .arg(format!("core.sshCommand=ssh -i {}", ssh_key_path));
         }
 
-        let status = cmd.arg("-b")
+        let status = cmd
+            .arg("-b")
             .arg(repository_branch)
             .arg(repository_address)
             .arg(repository_path)
@@ -664,7 +673,11 @@ impl BuildDirCreator {
                     info!("Build directory created");
                 }
                 Err(e) => {
-                    warn!("Build directory creation failed. Error: {:?}, Directory: {}", e, build_dir.display());
+                    warn!(
+                        "Build directory creation failed. Error: {:?}, Directory: {}",
+                        e,
+                        build_dir.display()
+                    );
                 }
             }
         }

@@ -1,7 +1,6 @@
 //! State storage
 //!
 
-
 use super::mount::MountState;
 
 pub struct State {
@@ -15,7 +14,6 @@ impl State {
         }
     }
 }
-
 
 pub struct StateStorage {
     state: tokio::sync::Mutex<State>,

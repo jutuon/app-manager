@@ -10,14 +10,16 @@ pub use manager_api_client::apis::{
     configuration::{ApiKey, Configuration},
     manager_api::{
         GetEncryptionKeyError, GetSoftwareInfoError, GetSystemInfoAllError, GetSystemInfoError,
-        PostRequestBuildSoftwareError, PostRequestSoftwareUpdateError, PostRequestRestartOrResetBackendError,
+        PostRequestBuildSoftwareError, PostRequestRestartOrResetBackendError,
+        PostRequestSoftwareUpdateError,
     },
     Error,
 };
 use manager_api_client::{
     apis::manager_api::{
         get_encryption_key, get_software_info, get_system_info_all, post_request_build_software,
-        post_request_software_update, GetLatestSoftwareError, post_request_restart_or_reset_backend,
+        post_request_restart_or_reset_backend, post_request_software_update,
+        GetLatestSoftwareError,
     },
     manual_additions::get_latest_software_fixed,
 };

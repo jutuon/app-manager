@@ -4,7 +4,10 @@ use std::{
 };
 
 use axum::{
-    body::Body, extract::ConnectInfo, middleware::Next, response::{IntoResponse, Response}
+    body::Body,
+    extract::ConnectInfo,
+    middleware::Next,
+    response::{IntoResponse, Response},
 };
 use headers::{Header, HeaderValue};
 use hyper::{header, Request};

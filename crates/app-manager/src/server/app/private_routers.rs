@@ -64,9 +64,7 @@ impl PrivateRoutes {
                 post({
                     let state = self.state.clone();
                     move |param1, param2| {
-                        api::manager::post_request_restart_or_reset_backend(
-                            param1, param2, state,
-                        )
+                        api::manager::post_request_restart_or_reset_backend(param1, param2, state)
                     }
                 }),
             )

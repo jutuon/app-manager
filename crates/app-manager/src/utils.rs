@@ -101,10 +101,11 @@ pub struct InProgressSender<T> {
     sender: tokio::sync::mpsc::Sender<()>,
 }
 
-impl <T> InProgressSender<T> {
+impl<T> InProgressSender<T> {
     pub async fn send_message(&self, message: T) -> Result<(), InProgressCmdChannelError> {
-        let mut current_message =
-            self.message_storage.try_lock()
+        let mut current_message = self
+            .message_storage
+            .try_lock()
             .change_context(InProgressCmdChannelError::AlreadyLocked)?;
         if current_message.is_some() {
             return Err(InProgressCmdChannelError::CommandInProgress.report());
@@ -123,7 +124,6 @@ impl <T> InProgressSender<T> {
     }
 }
 
-
 #[derive(Debug)]
 pub struct InProgressReceiver<T> {
     /// Is empty when previous message is handled.
@@ -132,8 +132,7 @@ pub struct InProgressReceiver<T> {
     receiver: tokio::sync::mpsc::Receiver<()>,
 }
 
-
-impl <T> InProgressReceiver<T> {
+impl<T> InProgressReceiver<T> {
     pub async fn is_new_message_available(&mut self) -> Result<(), InProgressCmdChannelError> {
         self.receiver
             .recv()
@@ -142,14 +141,10 @@ impl <T> InProgressReceiver<T> {
         Ok(())
     }
 
-    pub async fn lock_message_container(
-        &self
-    ) -> InProgressContainer<T> {
+    pub async fn lock_message_container(&self) -> InProgressContainer<T> {
         let lock = self.message_storage.clone().lock_owned().await;
 
-        InProgressContainer {
-            in_progress: lock,
-        }
+        InProgressContainer { in_progress: lock }
     }
 }
 
@@ -158,13 +153,13 @@ pub struct InProgressContainer<T> {
     in_progress: OwnedMutexGuard<Option<T>>,
 }
 
-impl <T> InProgressContainer<T> {
+impl<T> InProgressContainer<T> {
     pub fn get_message(&self) -> Option<&T> {
         self.in_progress.as_ref()
     }
 }
 
-impl <T> Drop for InProgressContainer<T> {
+impl<T> Drop for InProgressContainer<T> {
     fn drop(&mut self) {
         *self.in_progress = None;
     }

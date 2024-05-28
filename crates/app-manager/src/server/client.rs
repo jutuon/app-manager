@@ -58,7 +58,10 @@ impl ApiClient {
             .build()
             .change_context(ApiError::ClientBuildFailed)?;
 
-        let encryption_key_client = if let Some(timeout_seconds) = config.secure_storage_config().and_then(|v| v.key_download_timeout_seconds) {
+        let encryption_key_client = if let Some(timeout_seconds) = config
+            .secure_storage_config()
+            .and_then(|v| v.key_download_timeout_seconds)
+        {
             base_client_builder(config)
                 .timeout(Duration::from_secs(timeout_seconds.into()))
                 .build()

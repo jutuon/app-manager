@@ -1,4 +1,11 @@
-use std::{convert::Infallible, future::IntoFuture, net::{IpAddr, Ipv4Addr, SocketAddr}, pin::Pin, sync::Arc, time::Duration};
+use std::{
+    convert::Infallible,
+    future::IntoFuture,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    pin::Pin,
+    sync::Arc,
+    time::Duration,
+};
 
 use axum::Router;
 use futures::future::poll_fn;
@@ -14,14 +21,14 @@ use tokio::{
     task::JoinHandle,
 };
 use tokio_rustls::{rustls::ServerConfig, TlsAcceptor};
-use tower::{Service};
+use tower::Service;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info, log::warn};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
-    api::{ApiDoc},
+    api::ApiDoc,
     config::{
         info::{BUILD_INFO_CARGO_PKG_VERSION, BUILD_INFO_GIT_DESCRIBE},
         Config,
@@ -39,8 +46,8 @@ pub mod client;
 pub mod info;
 pub mod mount;
 pub mod reboot;
-pub mod update;
 pub mod state;
+pub mod update;
 
 /// Drop this when quit starts
 pub type ServerQuitHandle = broadcast::Sender<()>;
@@ -86,8 +93,12 @@ impl AppServer {
 
         // Start reboot manager
 
-        let (reboot_manager_quit_handle, reboot_manager_handle) =
-            reboot::RebootManager::new(self.config.clone(), api_client.clone(), state.clone(), server_quit_watcher.resubscribe());
+        let (reboot_manager_quit_handle, reboot_manager_handle) = reboot::RebootManager::new(
+            self.config.clone(),
+            api_client.clone(),
+            state.clone(),
+            server_quit_watcher.resubscribe(),
+        );
 
         // Start update manager
 
@@ -260,22 +271,34 @@ impl AppServer {
         info!("Public API is available on {}", addr);
 
         let join_handle = if let Some(tls_config) = self.config.public_api_tls_config() {
-            self.create_server_task_with_tls(addr, router.clone(), tls_config.clone(), quit_notification.resubscribe())
-                .await
+            self.create_server_task_with_tls(
+                addr,
+                router.clone(),
+                tls_config.clone(),
+                quit_notification.resubscribe(),
+            )
+            .await
         } else {
-            self.create_server_task_no_tls(router.clone(), addr, "Public API", quit_notification.resubscribe())
-                .await
+            self.create_server_task_no_tls(
+                router.clone(),
+                addr,
+                "Public API",
+                quit_notification.resubscribe(),
+            )
+            .await
         };
 
-        let second_join_handle = if let Some(port) = self.config.socket().second_public_api_localhost_only_port {
-            let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
-            info!("Public API is available also on {}", addr);
-            let handle = self.create_server_task_no_tls(router, addr, "Second public API", quit_notification)
-                .await;
-            Some(handle)
-        } else {
-            None
-        };
+        let second_join_handle =
+            if let Some(port) = self.config.socket().second_public_api_localhost_only_port {
+                let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
+                info!("Public API is available also on {}", addr);
+                let handle = self
+                    .create_server_task_no_tls(router, addr, "Second public API", quit_notification)
+                    .await;
+                Some(handle)
+            } else {
+                None
+            };
 
         (join_handle, second_join_handle)
     }
@@ -377,8 +400,13 @@ impl AppServer {
         mut quit_notification: ServerQuitWatcher,
     ) -> JoinHandle<()> {
         let normal_api_server = {
-            let listener = tokio::net::TcpListener::bind(addr).await.expect("Address not available");
-            axum::serve(listener, router.into_make_service_with_connect_info::<SocketAddr>())
+            let listener = tokio::net::TcpListener::bind(addr)
+                .await
+                .expect("Address not available");
+            axum::serve(
+                listener,
+                router.into_make_service_with_connect_info::<SocketAddr>(),
+            )
         };
 
         tokio::spawn(async move {
