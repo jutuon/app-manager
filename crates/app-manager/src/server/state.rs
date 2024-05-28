@@ -1,7 +1,6 @@
 //! State storage
 //!
 
-use tokio::sync::MutexGuard;
 
 use super::mount::MountState;
 

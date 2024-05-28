@@ -4,7 +4,6 @@ use axum::Router;
 use futures::future::poll_fn;
 use hyper::body::Incoming;
 use hyper_util::rt::{TokioExecutor, TokioIo};
-use manager_model::{ResetDataQueryParam, SoftwareOptions};
 use tokio::{
     net::TcpListener,
     signal::{
@@ -15,14 +14,14 @@ use tokio::{
     task::JoinHandle,
 };
 use tokio_rustls::{rustls::ServerConfig, TlsAcceptor};
-use tower::{MakeService, Service};
+use tower::{Service};
 use tower_http::trace::TraceLayer;
 use tracing::{error, info, log::warn};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
-    api::{ApiDoc, GetBuildManager, GetUpdateManager},
+    api::{ApiDoc},
     config::{
         info::{BUILD_INFO_CARGO_PKG_VERSION, BUILD_INFO_GIT_DESCRIBE},
         Config,

@@ -10,7 +10,7 @@ use error_stack::{Result, ResultExt};
 use manager_model::{
     BuildInfo, DownloadType, SoftwareOptions, BACKEND_REPOSITORY_NAME, MANAGER_REPOSITORY_NAME,
 };
-use tokio::{process::Command, sync::mpsc, task::JoinHandle};
+use tokio::{process::Command, task::JoinHandle};
 use tracing::{info, warn};
 
 use super::ServerQuitWatcher;

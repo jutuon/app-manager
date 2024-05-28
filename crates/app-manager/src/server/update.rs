@@ -3,12 +3,12 @@
 use std::{
     path::{Path, PathBuf},
     process::ExitStatus,
-    sync::{atomic::{Ordering, AtomicBool}, Arc},
+    sync::{atomic::{Ordering}, Arc},
 };
 
 use error_stack::{Result, ResultExt, FutureExt};
 use manager_model::{BuildInfo, ResetDataQueryParam, SoftwareInfo, SoftwareOptions};
-use tokio::{process::Command, sync::{mpsc, Mutex}, task::JoinHandle};
+use tokio::{process::Command, task::JoinHandle};
 use tracing::{info, warn};
 
 use super::{

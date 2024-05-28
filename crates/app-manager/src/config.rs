@@ -6,7 +6,7 @@ use std::{
 };
 
 use error_stack::{Result, ResultExt};
-use rustls_pemfile::{certs, rsa_private_keys};
+use rustls_pemfile::{certs};
 use tokio_rustls::rustls::{ServerConfig};
 use tracing::{info, log::warn};
 
