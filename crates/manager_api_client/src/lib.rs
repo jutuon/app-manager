@@ -1,3 +1,8 @@
+#![allow(
+    clippy::empty_docs,
+    clippy::to_string_trait_impl,
+)]
+
 #[macro_use]
 extern crate serde_derive;
 
