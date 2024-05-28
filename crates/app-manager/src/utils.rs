@@ -170,7 +170,7 @@ impl<T> Drop for InProgressContainer<T> {
 pub struct InProgressChannel;
 
 impl InProgressChannel {
-    pub fn new<T>() -> (InProgressSender<T>, InProgressReceiver<T>) {
+    pub fn create<T>() -> (InProgressSender<T>, InProgressReceiver<T>) {
         let (sender, receiver) = tokio::sync::mpsc::channel(1);
         let mutex = Arc::new(Mutex::new(None));
 

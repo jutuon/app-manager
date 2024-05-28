@@ -84,7 +84,7 @@ impl AppServer {
         // Start build manager
 
         let (build_manager_quit_handle, build_manager_handle) =
-            BuildManager::new(self.config.clone(), server_quit_watcher.resubscribe());
+            BuildManager::new_manager(self.config.clone(), server_quit_watcher.resubscribe());
 
         // Create API client
 
@@ -93,7 +93,7 @@ impl AppServer {
 
         // Start reboot manager
 
-        let (reboot_manager_quit_handle, reboot_manager_handle) = reboot::RebootManager::new(
+        let (reboot_manager_quit_handle, reboot_manager_handle) = reboot::RebootManager::new_manager(
             self.config.clone(),
             api_client.clone(),
             state.clone(),
@@ -102,7 +102,7 @@ impl AppServer {
 
         // Start update manager
 
-        let (update_manager_quit_handle, update_manager_handle) = update::UpdateManager::new(
+        let (update_manager_quit_handle, update_manager_handle) = update::UpdateManager::new_manager(
             self.config.clone(),
             server_quit_watcher.resubscribe(),
             api_client.clone(),
@@ -430,8 +430,7 @@ impl AppServer {
     }
 
     pub fn create_public_router(&self, app: &mut App) -> Router {
-        let router = app.create_manager_server_router();
-        router
+        app.create_manager_server_router()
     }
 
     pub fn create_swagger_ui() -> SwaggerUi {

@@ -15,6 +15,12 @@ impl State {
     }
 }
 
+impl Default for State {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct StateStorage {
     state: tokio::sync::Mutex<State>,
 }
@@ -34,5 +40,11 @@ impl StateStorage {
     pub async fn modify<T>(&self, action: impl Fn(&mut State) -> T) -> T {
         let mut state = self.state.lock().await;
         action(&mut state)
+    }
+}
+
+impl Default for StateStorage {
+    fn default() -> Self {
+        Self::new()
     }
 }

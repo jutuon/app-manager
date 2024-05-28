@@ -125,11 +125,11 @@ pub struct BuildManager {
 }
 
 impl BuildManager {
-    pub fn new(
+    pub fn new_manager(
         config: Arc<Config>,
         quit_notification: ServerQuitWatcher,
     ) -> (BuildManagerQuitHandle, BuildManagerHandle) {
-        let (sender, receiver) = InProgressChannel::new();
+        let (sender, receiver) = InProgressChannel::create();
 
         let manager = Self { config, receiver };
 
@@ -236,12 +236,16 @@ impl BuildManager {
 
     pub async fn git_refresh_backend_if_needed(&self) -> Result<(), BuildError> {
         let builder_config = self.builder_config()?;
+        let repository_path = self.backend_repository().as_os_str().to_string_lossy().into_owned();
+        let repository = RepositoryInfo {
+            address: &builder_config.backend_download_git_address,
+            path: &repository_path,
+            name: self.backend_repository_name(),
+            branch: builder_config.backend_branch.as_str(),
+        };
         self.git_refresh_if_needed(
             builder_config.backend_download_key_path.as_deref(),
-            &builder_config.backend_download_git_address,
-            &self.backend_repository().as_os_str().to_string_lossy(),
-            self.backend_repository_name(),
-            builder_config.backend_branch.as_str(),
+            &repository,
             &builder_config.backend_binary,
             builder_config.backend_pre_build_script.as_deref(),
         )
@@ -252,13 +256,16 @@ impl BuildManager {
 
     pub async fn git_refresh_manager_if_needed(&self) -> Result<(), BuildError> {
         let builder_config = self.builder_config()?;
-
+        let repository_path = self.manager_repository().as_os_str().to_string_lossy().into_owned();
+        let repository = RepositoryInfo {
+            address: &builder_config.manager_download_git_address,
+            path: &repository_path,
+            name: self.manager_repository_name(),
+            branch: builder_config.manager_branch.as_str(),
+        };
         self.git_refresh_if_needed(
             builder_config.manager_download_key_path.as_deref(),
-            &builder_config.manager_download_git_address,
-            &self.manager_repository().as_os_str().to_string_lossy(),
-            self.manager_repository_name(),
-            builder_config.manager_branch.as_str(),
+            &repository,
             &builder_config.manager_binary,
             builder_config.manager_pre_build_script.as_deref(),
         )
@@ -267,68 +274,59 @@ impl BuildManager {
         Ok(())
     }
 
-    pub async fn git_refresh_if_needed(
+    async fn git_refresh_if_needed(
         &self,
         download_key: Option<&Path>,
-        repository_address: &str,
-        repository_path: &str,
-        repository_name: &str,
-        repository_branch: &str,
+        repository: &RepositoryInfo<'_>,
         binary: &str,
         pre_build_script: Option<&Path>,
     ) -> Result<(), BuildError> {
         // Avoid injecting additional args to SSH command.
         if let Some(download_key) = download_key {
-            validate_path(&download_key)?;
+            validate_path(download_key)?;
         }
 
         Self::git_clone_repository_if_needed(
             download_key.map(|path| path.as_os_str().to_string_lossy().to_string()),
-            &repository_address,
-            &repository_path,
-            repository_name,
-            repository_branch,
+            repository,
         )
         .await?;
 
-        Self::git_pull_repository(&repository_path, repository_name, repository_branch).await?;
+        Self::git_pull_repository(repository).await?;
 
         let latest_build_commit_sha = self.get_latest_build_commit_sha(binary).await?;
         let current_commit_sha =
-            Self::git_get_commit_sha(&repository_path, repository_name).await?;
+            Self::git_get_commit_sha(repository).await?;
 
         if latest_build_commit_sha == current_commit_sha {
-            info!("No new commits for {}", repository_name);
+            info!("No new commits for {}", repository.name);
             return Ok(());
         }
 
         if let Some(script) = pre_build_script {
-            self.run_pre_build_script(script, repository_name, &repository_path)
+            self.run_pre_build_script(script, repository)
                 .await?;
         }
 
         let build_info = self
-            .cargo_build(&repository_path, repository_name, &binary)
+            .cargo_build(repository, binary)
             .await?;
 
-        self.copy_and_sign_binary(&repository_path, repository_name, &binary, build_info)
+        self.copy_and_sign_binary(repository, binary, build_info)
             .await?;
 
         Ok(())
     }
 
-    pub async fn git_clone_repository_if_needed(
+    async fn git_clone_repository_if_needed(
         ssh_key_path: Option<String>,
-        repository_address: &str,
-        repository_path: &str,
-        repository_name: &str,
-        repository_branch: &str,
+        repository: &RepositoryInfo<'_>,
     ) -> Result<(), BuildError> {
-        if Path::new(repository_path).exists() {
+        if Path::new(repository.path).exists() {
             return Ok(());
         }
 
-        info!("Cloning {} repository", repository_name);
+        info!("Cloning {} repository", repository.name);
         let mut cmd = Command::new("git");
         cmd.arg("clone");
 
@@ -339,9 +337,9 @@ impl BuildManager {
 
         let status = cmd
             .arg("-b")
-            .arg(repository_branch)
-            .arg(repository_address)
-            .arg(repository_path)
+            .arg(repository.branch)
+            .arg(repository.address)
+            .arg(repository.path)
             .status()
             .await
             .change_context(BuildError::ProcessWaitFailed)?;
@@ -356,18 +354,16 @@ impl BuildManager {
         Ok(())
     }
 
-    pub async fn git_pull_repository(
-        repository_path: &str,
-        repository_name: &str,
-        repository_branch: &str,
+    async fn git_pull_repository(
+        repository: &RepositoryInfo<'_>,
     ) -> Result<(), BuildError> {
-        info!("Git pull {} repository", repository_name);
+        info!("Git pull {} repository", repository.name);
         let status = Command::new("git")
             .arg("-C")
-            .arg(repository_path)
+            .arg(repository.path)
             .arg("pull")
             .arg("origin")
-            .arg(repository_branch)
+            .arg(repository.branch)
             .status()
             .await
             .change_context(BuildError::ProcessWaitFailed)?;
@@ -380,14 +376,13 @@ impl BuildManager {
         Ok(())
     }
 
-    pub async fn git_get_commit_sha(
-        repository_path: &str,
-        repository_name: &str,
+    async fn git_get_commit_sha(
+        repository: &RepositoryInfo<'_>,
     ) -> Result<String, BuildError> {
-        info!("Git get commit SHA from {} repository", repository_name);
+        info!("Git get commit SHA from {} repository", repository.name);
         let output = Command::new("git")
             .arg("-C")
-            .arg(repository_path)
+            .arg(repository.path)
             .arg("rev-parse")
             .arg("HEAD")
             .output()
@@ -428,20 +423,19 @@ impl BuildManager {
         Ok(build_info.commit_sha)
     }
 
-    pub async fn run_pre_build_script(
+    async fn run_pre_build_script(
         &self,
         pre_build_script_path: &Path,
-        repository_name: &str,
-        repository_path: &str,
+        repository: &RepositoryInfo<'_>,
     ) -> Result<(), BuildError> {
         info!(
             "Running pre-build script for {} repository",
-            repository_name
+            repository.name
         );
         let status: ExitStatus = Command::new("/bin/bash")
             .arg("-eux")
             .arg(pre_build_script_path)
-            .current_dir(repository_path)
+            .current_dir(repository.path)
             .status()
             .await
             .change_context(BuildError::ProcessWaitFailed)?;
@@ -454,13 +448,12 @@ impl BuildManager {
         Ok(())
     }
 
-    pub async fn cargo_build(
+    async fn cargo_build(
         &self,
-        repository_path: &str,
-        repository_name: &str,
+        repository: &RepositoryInfo<'_>,
         binary: &str,
     ) -> Result<BinaryBuildInfoOutput, BuildError> {
-        info!("Cargo build {} repository", repository_name);
+        info!("Cargo build {} repository", repository.name);
         let status = Command::new("nice")
             .arg("-n")
             .arg("19")
@@ -469,7 +462,7 @@ impl BuildManager {
             .arg("--bin")
             .arg(binary)
             .arg("--release")
-            .current_dir(repository_path)
+            .current_dir(repository.path)
             .status()
             .await
             .change_context(BuildError::ProcessWaitFailed)?;
@@ -479,7 +472,7 @@ impl BuildManager {
             return Err(BuildError::CommandFailed(status).into());
         }
 
-        let binary_path = Path::new(repository_path)
+        let binary_path = Path::new(repository.path)
             .join("target")
             .join("release")
             .join(binary);
@@ -487,7 +480,7 @@ impl BuildManager {
         info!("Getting build info for {}", binary_path.display());
         let output = Command::new(binary_path)
             .arg("--build-info")
-            .current_dir(repository_path)
+            .current_dir(repository.path)
             .output()
             .await
             .change_context(BuildError::ProcessWaitFailed)?;
@@ -503,14 +496,13 @@ impl BuildManager {
         }
     }
 
-    pub async fn copy_and_sign_binary(
+    async fn copy_and_sign_binary(
         &self,
-        repository_path: &str,
-        repository_name: &str,
+        repository: &RepositoryInfo<'_>,
         binary: &str,
         bulid_info_output: BinaryBuildInfoOutput,
     ) -> Result<(), BuildError> {
-        let binary_path = Path::new(repository_path)
+        let binary_path = Path::new(repository.path)
             .join("target")
             .join("release")
             .join(binary);
@@ -519,7 +511,7 @@ impl BuildManager {
 
         let build_dir_for_current = self
             .create_history_dir_if_needed()
-            .join(format!("{}-{}", repository_name, current_time,));
+            .join(format!("{}-{}", repository.name, current_time,));
 
         Self::create_dir(&build_dir_for_current);
         let target_binary = build_dir_for_current.join(binary);
@@ -578,8 +570,8 @@ impl BuildManager {
         }
 
         let build_info = BuildInfo {
-            commit_sha: Self::git_get_commit_sha(repository_path, repository_name).await?,
-            name: repository_name.to_string(),
+            commit_sha: Self::git_get_commit_sha(repository).await?,
+            name: repository.name.to_string(),
             timestamp: current_time.to_string(),
             build_info: bulid_info_output.0,
         };
@@ -607,15 +599,15 @@ impl BuildManager {
         Ok(())
     }
 
-    pub fn builder_config(&self) -> Result<&SoftwareBuilderConfig, BuildError> {
+    fn builder_config(&self) -> Result<&SoftwareBuilderConfig, BuildError> {
         self.config
             .software_builder()
             .ok_or(BuildError::SoftwareBuilderConfigMissing.into())
     }
 
-    pub fn create_dir(dir: &Path) {
+    fn create_dir(dir: &Path) {
         if !Path::new(&dir).exists() {
-            match std::fs::create_dir(&dir) {
+            match std::fs::create_dir(dir) {
                 Ok(()) => {
                     info!("{} directory created", dir.display());
                 }
@@ -762,4 +754,12 @@ impl BuildDirCreator {
             }
         }
     }
+}
+
+#[derive(Debug)]
+struct RepositoryInfo<'a> {
+    pub address: &'a str,
+    pub path: &'a str,
+    pub name: &'a str,
+    pub branch: &'a str,
 }

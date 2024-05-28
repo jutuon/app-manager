@@ -3,6 +3,11 @@
 #![deny(unused_features)]
 #![warn(unused_crate_dependencies)]
 
+#![allow(
+    clippy::single_match,
+    clippy::while_let_loop,
+)]
+
 use config::args::AppMode;
 
 pub mod api;

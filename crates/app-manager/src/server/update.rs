@@ -6,7 +6,7 @@ use std::{
     sync::{atomic::Ordering, Arc},
 };
 
-use error_stack::{FutureExt, Result, ResultExt};
+use error_stack::{Result, ResultExt};
 use manager_model::{BuildInfo, ResetDataQueryParam, SoftwareInfo, SoftwareOptions};
 use tokio::{process::Command, task::JoinHandle};
 use tracing::{info, warn};
@@ -163,13 +163,13 @@ pub struct UpdateManager {
 }
 
 impl UpdateManager {
-    pub fn new(
+    pub fn new_manager(
         config: Arc<Config>,
         quit_notification: ServerQuitWatcher,
         api_client: Arc<ApiClient>,
         reboot_manager_handle: RebootManagerHandle,
     ) -> (UpdateManagerQuitHandle, UpdateManagerHandle) {
-        let (sender, receiver) = InProgressChannel::new();
+        let (sender, receiver) = InProgressChannel::create();
 
         let manager = Self {
             config,
@@ -447,9 +447,9 @@ impl UpdateManager {
         info!("Decrypting binary {}", encrypted.display());
         let status = Command::new("gpg")
             .arg("--output")
-            .arg(&decrypted)
+            .arg(decrypted)
             .arg("--decrypt")
-            .arg(&encrypted)
+            .arg(encrypted)
             .status()
             .await
             .change_context(UpdateError::ProcessWaitFailed)?;
@@ -472,7 +472,7 @@ impl UpdateManager {
         info!("Importing GPG key");
         let status: ExitStatus = Command::new("gpg")
             .arg("--import")
-            .arg(&key_path)
+            .arg(key_path)
             .status()
             .await
             .change_context(UpdateError::ProcessWaitFailed)?;

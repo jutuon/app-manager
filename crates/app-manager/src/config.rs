@@ -79,8 +79,7 @@ impl Config {
     pub fn encryption_keys(&self) -> &[ServerEncryptionKey] {
         self.file
             .server_encryption_keys
-            .as_ref()
-            .map(|d| d.as_slice())
+            .as_deref()
             .unwrap_or(&[])
     }
 

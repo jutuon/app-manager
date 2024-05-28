@@ -104,7 +104,7 @@ pub struct RebootManager {
 }
 
 impl RebootManager {
-    pub fn new(
+    pub fn new_manager(
         config: Arc<Config>,
         api_client: Arc<ApiClient>,
         state: Arc<StateStorage>,

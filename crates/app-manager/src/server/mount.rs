@@ -65,6 +65,12 @@ impl MountState {
     }
 }
 
+impl Default for MountState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct MountManager {
     config: Arc<Config>,
     app_state: AppState,

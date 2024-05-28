@@ -42,17 +42,15 @@ pub async fn authenticate_with_api_key<S: GetConfig>(
 
     if API_SECURITY_LOCK.load(Ordering::Relaxed) {
         Err(StatusCode::LOCKED)
+    } else if state.config().api_key() != key_str {
+        API_SECURITY_LOCK.store(true, Ordering::Relaxed);
+        tracing::error!(
+            "API key has been guessed. API is now locked. Guesser information, addr: {}",
+            addr
+        );
+        Err(StatusCode::LOCKED)
     } else {
-        if state.config().api_key() == key_str {
-            Ok(next.run(req).await)
-        } else {
-            API_SECURITY_LOCK.store(true, Ordering::Relaxed);
-            tracing::error!(
-                "API key has been guessed. API is now locked. Guesser information, addr: {}",
-                addr
-            );
-            Err(StatusCode::LOCKED)
-        }
+        Ok(next.run(req).await)
     }
 }
 
