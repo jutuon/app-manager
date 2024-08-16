@@ -17,7 +17,7 @@ Method | HTTP request | Description
 
 ## get_encryption_key
 
-> crate::models::DataEncryptionKey get_encryption_key(server)
+> models::DataEncryptionKey get_encryption_key(server)
 Get encryption key for some server
 
 Get encryption key for some server
@@ -31,7 +31,7 @@ Name | Type | Description  | Required | Notes
 
 ### Return type
 
-[**crate::models::DataEncryptionKey**](DataEncryptionKey.md)
+[**models::DataEncryptionKey**](DataEncryptionKey.md)
 
 ### Authorization
 
@@ -78,7 +78,7 @@ Name | Type | Description  | Required | Notes
 
 ## get_software_info
 
-> crate::models::SoftwareInfo get_software_info()
+> models::SoftwareInfo get_software_info()
 Get current software info about currently installed backend and manager.
 
 Get current software info about currently installed backend and manager.
@@ -89,7 +89,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**crate::models::SoftwareInfo**](SoftwareInfo.md)
+[**models::SoftwareInfo**](SoftwareInfo.md)
 
 ### Authorization
 
@@ -105,7 +105,7 @@ This endpoint does not need any parameter.
 
 ## get_system_info
 
-> crate::models::SystemInfo get_system_info()
+> models::SystemInfo get_system_info()
 Get system info about current operating system, hardware and software.
 
 Get system info about current operating system, hardware and software.  Returns system info related to current manager instance.
@@ -116,7 +116,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**crate::models::SystemInfo**](SystemInfo.md)
+[**models::SystemInfo**](SystemInfo.md)
 
 ### Authorization
 
@@ -132,7 +132,7 @@ This endpoint does not need any parameter.
 
 ## get_system_info_all
 
-> crate::models::SystemInfoList get_system_info_all()
+> models::SystemInfoList get_system_info_all()
 Get system info about current operating system, hardware and software.
 
 Get system info about current operating system, hardware and software.  Returns system info related to current manager instance and ones defined in config file.
@@ -143,7 +143,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**crate::models::SystemInfoList**](SystemInfoList.md)
+[**models::SystemInfoList**](SystemInfoList.md)
 
 ### Authorization
 
