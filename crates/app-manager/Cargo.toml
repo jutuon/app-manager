@@ -42,4 +42,4 @@ manager_api = { path = "../manager_api" }
 manager_model = { path = "../manager_model" }
 
 [build-dependencies]
-vergen = { workspace = true }
+vergen-gitcl = { workspace = true }

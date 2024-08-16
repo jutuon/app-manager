@@ -9,7 +9,7 @@ members = [
 
 [workspace.dependencies]
 
-vergen = { version = "8.3.1", features = ["cargo", "git", "gitcl", "rustc"] }
+vergen-gitcl = { version = "1.0.0", features = ["build", "cargo", "rustc"] }
 
 error-stack = "0.4.1"
 thiserror = "1.0.56"
