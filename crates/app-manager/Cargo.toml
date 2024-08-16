@@ -23,7 +23,7 @@ toml = { workspace = true }
 futures = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 
-reqwest = { workspace = true, features = ["json"] }
+reqwest = { workspace = true }
 utoipa = { workspace = true, features = ["axum_extras", "uuid"] }
 utoipa-swagger-ui = { workspace = true, features = ["axum"] }
 url = { workspace = true, features = ["serde"] }
