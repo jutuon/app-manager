@@ -20,8 +20,6 @@ Method | HTTP request | Description
 > models::DataEncryptionKey get_encryption_key(server)
 Get encryption key for some server
 
-Get encryption key for some server
-
 ### Parameters
 
 
@@ -47,10 +45,10 @@ Name | Type | Description  | Required | Notes
 
 ## get_latest_software
 
-> std::path::PathBuf get_latest_software(software_options, download_type)
+> Vec<i32> get_latest_software(software_options, download_type)
 Download latest software.
 
-Download latest software.  Returns BuildInfo JSON or encrypted binary depending on DownloadTypeQueryParam value.
+Returns BuildInfo JSON or encrypted binary depending on DownloadTypeQueryParam value.
 
 ### Parameters
 
@@ -62,7 +60,7 @@ Name | Type | Description  | Required | Notes
 
 ### Return type
 
-[**std::path::PathBuf**](std::path::PathBuf.md)
+**Vec<i32>**
 
 ### Authorization
 
@@ -79,8 +77,6 @@ Name | Type | Description  | Required | Notes
 ## get_software_info
 
 > models::SoftwareInfo get_software_info()
-Get current software info about currently installed backend and manager.
-
 Get current software info about currently installed backend and manager.
 
 ### Parameters
@@ -108,7 +104,7 @@ This endpoint does not need any parameter.
 > models::SystemInfo get_system_info()
 Get system info about current operating system, hardware and software.
 
-Get system info about current operating system, hardware and software.  Returns system info related to current manager instance.
+Returns system info related to current manager instance.
 
 ### Parameters
 
@@ -135,7 +131,7 @@ This endpoint does not need any parameter.
 > models::SystemInfoList get_system_info_all()
 Get system info about current operating system, hardware and software.
 
-Get system info about current operating system, hardware and software.  Returns system info related to current manager instance and ones defined in config file.
+Returns system info related to current manager instance and ones defined in config file.
 
 ### Parameters
 
@@ -160,8 +156,6 @@ This endpoint does not need any parameter.
 ## post_request_build_software
 
 > post_request_build_software(software_options)
-Request building the latest software from git.
-
 Request building the latest software from git.
 
 ### Parameters
@@ -192,7 +186,7 @@ Name | Type | Description  | Required | Notes
 > post_request_restart_or_reset_backend(reset_data)
 Restart or reset backend.
 
-Restart or reset backend.  Restarts backend process. Optionally backend data storage can be reset also. The data reset will work as described in request_software_update request documentation.
+Restarts backend process. Optionally backend data storage can be reset also. The data reset will work as described in request_software_update request documentation.
 
 ### Parameters
 
@@ -222,7 +216,7 @@ Name | Type | Description  | Required | Notes
 > post_request_software_update(software_options, reboot, reset_data)
 Request software update.
 
-Request software update.  Manager will update the requested software and reboot the computer as soon as possible if specified.  Software's current data storage can be resetted. This will move the data in the data storage to another location waiting for deletion. The deletetion will happen when the next data reset happens. The selected software must support data reset_data query parameter. Resetting the data storage can only work if it is configured from app-manager config file.
+Manager will update the requested software and reboot the computer as soon as possible if specified.  Software's current data storage can be resetted. This will move the data in the data storage to another location waiting for deletion. The deletetion will happen when the next data reset happens. The selected software must support data reset_data query parameter. Resetting the data storage can only work if it is configured from app-manager config file.
 
 ### Parameters
 

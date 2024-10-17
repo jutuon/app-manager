@@ -51,8 +51,12 @@ pub const PATH_PREFIX: &str = "/api/v1/";
     info(
         title = "app-manager",
         description = "App manager API",
-        version = "0.1.0"
-    )
+        version = "0.1.0",
+        license(
+            name = "",
+            url = "https://example.com",
+        ),
+    ),
 )]
 pub struct ApiDoc;
 

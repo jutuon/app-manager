@@ -28,8 +28,8 @@ futures = "0.3.30"
 tokio = { version = "1.39.2", features = ["full"] }
 
 reqwest = { version = "0.12.5", features = ["json"] }
-utoipa = { version = "4.2.3", features = ["axum_extras", "uuid"] }
-utoipa-swagger-ui = { version = "7.1.0", features = ["axum", "vendored"] }
+utoipa = { version = "5.1.1", features = ["axum_extras", "uuid"] }
+utoipa-swagger-ui = { version = "8.0.1", features = ["axum", "vendored"] }
 url = { version = "2.5.2", features = ["serde"] }
 headers = "0.4.0"
 jsonwebtoken = "9.3.0"

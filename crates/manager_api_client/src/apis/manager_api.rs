@@ -80,7 +80,6 @@ pub enum PostRequestSoftwareUpdateError {
 }
 
 
-/// Get encryption key for some server
 pub async fn get_encryption_key(configuration: &configuration::Configuration, server: &str) -> Result<models::DataEncryptionKey, Error<GetEncryptionKeyError>> {
     let local_var_configuration = configuration;
 
@@ -116,8 +115,8 @@ pub async fn get_encryption_key(configuration: &configuration::Configuration, se
     }
 }
 
-/// Download latest software.  Returns BuildInfo JSON or encrypted binary depending on DownloadTypeQueryParam value.
-pub async fn get_latest_software(configuration: &configuration::Configuration, software_options: models::SoftwareOptions, download_type: models::DownloadType) -> Result<std::path::PathBuf, Error<GetLatestSoftwareError>> {
+/// Returns BuildInfo JSON or encrypted binary depending on DownloadTypeQueryParam value.
+pub async fn get_latest_software(configuration: &configuration::Configuration, software_options: models::SoftwareOptions, download_type: models::DownloadType) -> Result<Vec<i32>, Error<GetLatestSoftwareError>> {
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
@@ -154,7 +153,6 @@ pub async fn get_latest_software(configuration: &configuration::Configuration, s
     }
 }
 
-/// Get current software info about currently installed backend and manager.
 pub async fn get_software_info(configuration: &configuration::Configuration, ) -> Result<models::SoftwareInfo, Error<GetSoftwareInfoError>> {
     let local_var_configuration = configuration;
 
@@ -190,7 +188,7 @@ pub async fn get_software_info(configuration: &configuration::Configuration, ) -
     }
 }
 
-/// Get system info about current operating system, hardware and software.  Returns system info related to current manager instance.
+/// Returns system info related to current manager instance.
 pub async fn get_system_info(configuration: &configuration::Configuration, ) -> Result<models::SystemInfo, Error<GetSystemInfoError>> {
     let local_var_configuration = configuration;
 
@@ -226,7 +224,7 @@ pub async fn get_system_info(configuration: &configuration::Configuration, ) -> 
     }
 }
 
-/// Get system info about current operating system, hardware and software.  Returns system info related to current manager instance and ones defined in config file.
+/// Returns system info related to current manager instance and ones defined in config file.
 pub async fn get_system_info_all(configuration: &configuration::Configuration, ) -> Result<models::SystemInfoList, Error<GetSystemInfoAllError>> {
     let local_var_configuration = configuration;
 
@@ -262,7 +260,6 @@ pub async fn get_system_info_all(configuration: &configuration::Configuration, )
     }
 }
 
-/// Request building the latest software from git.
 pub async fn post_request_build_software(configuration: &configuration::Configuration, software_options: models::SoftwareOptions) -> Result<(), Error<PostRequestBuildSoftwareError>> {
     let local_var_configuration = configuration;
 
@@ -299,7 +296,7 @@ pub async fn post_request_build_software(configuration: &configuration::Configur
     }
 }
 
-/// Restart or reset backend.  Restarts backend process. Optionally backend data storage can be reset also. The data reset will work as described in request_software_update request documentation.
+/// Restarts backend process. Optionally backend data storage can be reset also. The data reset will work as described in request_software_update request documentation.
 pub async fn post_request_restart_or_reset_backend(configuration: &configuration::Configuration, reset_data: bool) -> Result<(), Error<PostRequestRestartOrResetBackendError>> {
     let local_var_configuration = configuration;
 
@@ -336,7 +333,7 @@ pub async fn post_request_restart_or_reset_backend(configuration: &configuration
     }
 }
 
-/// Request software update.  Manager will update the requested software and reboot the computer as soon as possible if specified.  Software's current data storage can be resetted. This will move the data in the data storage to another location waiting for deletion. The deletetion will happen when the next data reset happens. The selected software must support data reset_data query parameter. Resetting the data storage can only work if it is configured from app-manager config file.
+/// Manager will update the requested software and reboot the computer as soon as possible if specified.  Software's current data storage can be resetted. This will move the data in the data storage to another location waiting for deletion. The deletetion will happen when the next data reset happens. The selected software must support data reset_data query parameter. Resetting the data storage can only work if it is configured from app-manager config file.
 pub async fn post_request_software_update(configuration: &configuration::Configuration, software_options: models::SoftwareOptions, reboot: bool, reset_data: bool) -> Result<(), Error<PostRequestSoftwareUpdateError>> {
     let local_var_configuration = configuration;
 
