@@ -247,7 +247,7 @@ pub struct SoftwareBuilderConfig {
 pub struct RebootIfNeededConfig {
     /// Time when reboot should be done. Format "hh:mm". For example "12:00".
     ///
-    /// This is a local time value (not UTC time).
+    /// This is an UTC time value without UTC offset.
     pub time: TimeValue,
 }
 

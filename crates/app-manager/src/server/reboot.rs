@@ -11,7 +11,7 @@ use std::{
 };
 
 use error_stack::{Result, ResultExt};
-use time::{OffsetDateTime, Time, UtcOffset};
+use time::{OffsetDateTime, Time};
 use tokio::{process::Command, sync::mpsc, task::JoinHandle, time::sleep};
 use tracing::{info, warn};
 
@@ -31,9 +31,6 @@ pub static REBOOT_ON_NEXT_CHECK: AtomicBool = AtomicBool::new(false);
 pub enum RebootError {
     #[error("Reboot manager not available")]
     RebootManagerNotAvailable,
-
-    #[error("Local time is not available")]
-    LocalTimeNotAvailable,
 
     #[error("Time related error")]
     TimeError,
@@ -245,7 +242,7 @@ impl RebootManager {
     pub async fn sleep_until_reboot_check(config: &Config) -> Result<(), RebootError> {
         info!("Calculating sleep time");
 
-        let now = Self::get_local_time().await?;
+        let now = OffsetDateTime::now_utc();
 
         let target_time = if let Some(reboot) = config.reboot_if_needed() {
             Time::from_hms(reboot.time.hours, reboot.time.minutes, 0)
@@ -269,54 +266,6 @@ impl RebootManager {
         sleep(duration.unsigned_abs()).await;
 
         Ok(())
-    }
-
-    pub async fn get_local_time() -> Result<OffsetDateTime, RebootError> {
-        let now: OffsetDateTime = OffsetDateTime::now_utc();
-        let offset = Self::get_utc_offset_hours().await?;
-        let now = now
-            .to_offset(UtcOffset::from_hms(offset, 0, 0).change_context(RebootError::TimeError)?);
-        Ok(now)
-    }
-
-    /// Get UTC offset hours which depends on system's timezone setting.
-    pub async fn get_utc_offset_hours() -> Result<i8, RebootError> {
-        let output = Command::new("date")
-            .arg("+%z")
-            .output()
-            .await
-            .change_context(RebootError::ProcessWaitFailed)?;
-
-        if !output.status.success() {
-            tracing::error!("date command failed");
-            return Err(RebootError::CommandFailed(output.status).into());
-        }
-
-        let offset =
-            std::str::from_utf8(&output.stdout).change_context(RebootError::InvalidOutput)?;
-
-        // Determine is the offset negative or positive
-        let multiplier = match offset.chars().nth(0) {
-            Some('-') => -1,
-            _ => 1,
-        };
-
-        let hours_number_string = offset
-            .chars()
-            .skip(1) // Skip '+' or '-' character
-            .take(2)
-            .collect::<String>();
-        let hours_number_str = hours_number_string.trim_start_matches('0');
-
-        let hours = if hours_number_str.is_empty() {
-            0
-        } else {
-            hours_number_str
-                .parse::<i8>()
-                .change_context(RebootError::InvalidOutput)?
-        };
-
-        Ok(hours * multiplier)
     }
 
     fn api_manager(&self) -> ApiManager<'_> {
