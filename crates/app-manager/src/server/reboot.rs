@@ -13,7 +13,7 @@ use std::{
 use error_stack::{Result, ResultExt};
 use time::{OffsetDateTime, Time};
 use tokio::{process::Command, sync::mpsc, task::JoinHandle, time::sleep};
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 use super::{
     client::{ApiClient, ApiManager},
@@ -144,9 +144,9 @@ impl RebootManager {
                 result = Self::sleep_until_reboot_check(&self.config), if !check_cooldown => {
                     match result {
                         Ok(()) => {
-                            info!("Sleep completed");
+                            debug!("Sleep completed");
                             if self.reboot_if_needed().await {
-                                info!("Reboot requesting complete");
+                                debug!("Reboot requesting complete");
                             }
                         },
                         Err(e) => {
@@ -240,7 +240,7 @@ impl RebootManager {
     }
 
     pub async fn sleep_until_reboot_check(config: &Config) -> Result<(), RebootError> {
-        info!("Calculating sleep time");
+        debug!("Calculating sleep time");
 
         let now = OffsetDateTime::now_utc();
 
@@ -262,7 +262,7 @@ impl RebootManager {
             tomorrow_target_date_time - now
         };
 
-        info!("Time until reboot check: {}", duration);
+        debug!("Time until reboot check: {}", duration);
         sleep(duration.unsigned_abs()).await;
 
         Ok(())
