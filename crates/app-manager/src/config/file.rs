@@ -20,6 +20,8 @@ pub const DEFAULT_CONFIG_FILE_TEXT: &str = r#"
 # scripts_dir = "/app-server-tools/manager-tools"
 # storage_dir = "/app-secure-storage/app/app-manager-storage"
 
+# log_timestamp = true # optional
+
 [socket]
 public_api = "127.0.0.1:5000"
 # Second API has no TLS even if it is configured
@@ -103,6 +105,8 @@ pub struct ConfigFile {
     pub system_info: Option<SystemInfoConfig>,
     /// TLS is required if debug setting is false.
     pub tls: Option<TlsConfig>,
+    /// Write timestamp to log messages. Enabled by default.
+    pub log_timestamp: Option<bool>,
 }
 
 impl ConfigFile {

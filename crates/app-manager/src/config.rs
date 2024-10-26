@@ -123,6 +123,10 @@ impl Config {
     pub fn reboot_if_needed(&self) -> &Option<RebootIfNeededConfig> {
         &self.file.reboot_if_needed
     }
+
+    pub fn log_timestamp(&self) -> bool {
+        self.file.log_timestamp.unwrap_or(true)
+    }
 }
 
 pub fn get_config(_args: ArgsConfig) -> Result<Config, GetConfigError> {

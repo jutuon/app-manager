@@ -24,6 +24,7 @@ use tokio_rustls::{rustls::ServerConfig, TlsAcceptor};
 use tower::Service;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info, log::warn};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -67,7 +68,22 @@ impl AppServer {
     }
 
     pub async fn run(self) {
-        tracing_subscriber::fmt::init();
+        let log_with_timestamp_layer = if self.config.log_timestamp() {
+            Some(tracing_subscriber::fmt::layer().with_filter(EnvFilter::from_default_env()))
+        } else {
+            None
+        };
+
+        let log_without_timestamp_layer = if self.config.log_timestamp() {
+            None
+        } else {
+            Some(tracing_subscriber::fmt::layer().without_time().with_filter(EnvFilter::from_default_env()))
+        };
+
+        tracing_subscriber::registry()
+            .with(log_with_timestamp_layer)
+            .with(log_without_timestamp_layer)
+            .init();
 
         info!(
             "app-manager version: {}-{}",
